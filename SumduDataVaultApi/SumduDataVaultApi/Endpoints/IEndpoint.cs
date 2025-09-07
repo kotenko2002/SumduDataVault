@@ -1,4 +1,4 @@
-﻿namespace SumduDataVaultApi.Endpoints.Abstractions
+﻿namespace SumduDataVaultApi.Endpoints
 {
     public interface IEndpoint
     {

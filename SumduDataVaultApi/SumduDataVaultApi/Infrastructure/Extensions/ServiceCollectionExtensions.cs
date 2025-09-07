@@ -1,0 +1,89 @@
+﻿using Mapster;
+using MapsterMapper;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using OpenSearch.Client;
+using OpenSearch.Client.JsonNetSerializer;
+using OpenSearch.Net;
+using SumduDataVaultApi.Configs;
+using SumduDataVaultApi.DataAccess;
+using SumduDataVaultApi.DataAccess.Entities;
+using SumduDataVaultApi.Endpoints;
+using System.Reflection;
+
+namespace SumduDataVaultApi.Infrastructure.Extensions
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection AddMapping(this IServiceCollection services, IConfiguration configuration)
+        {
+            var typeAdapterConfig = TypeAdapterConfig.GlobalSettings;
+            typeAdapterConfig.Scan(Assembly.GetExecutingAssembly());
+
+            services.AddSingleton(typeAdapterConfig);
+            services.AddScoped<IMapper, ServiceMapper>();
+
+            return services;
+        }
+
+
+        public static IServiceCollection AddDbContext(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(configuration.GetConnectionString("Postgres")));
+
+            services.AddIdentity<User, IdentityRole<int>>()
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddDefaultTokenProviders()
+                .AddErrorDescriber<UkrainianIdentityErrorDescriber>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddOpenSearch(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.Configure<OpenSearchConfig>(configuration.GetSection("OpenSearch"));
+
+            services.AddSingleton<IOpenSearchClient>(serviceProvider =>
+            {
+                var config = serviceProvider.GetRequiredService<IOptions<OpenSearchConfig>>().Value;
+                
+                var uris = config.Nodes.Select(n => new Uri(n)).ToArray();
+                var pool = new StaticConnectionPool(uris);
+
+                var settings = new ConnectionSettings(pool, (builtin, s) => new JsonNetSerializer(builtin, s))
+                    .DefaultIndex(config.DefaultIndex)
+                    .BasicAuthentication(config.Username, config.Password);
+
+                if (config.AllowInvalidCertificate)
+                {
+                    settings = settings.ServerCertificateValidationCallback(CertificateValidations.AllowAll);
+                }
+
+                if (config.EnableDebugMode)
+                {
+                    settings = settings.EnableDebugMode();
+                }
+
+                return new OpenSearchClient(settings);
+            });
+
+            return services;
+        }
+
+        public static IServiceCollection AddEndpoints(this IServiceCollection services, Assembly assembly)
+        {
+            ServiceDescriptor[] serviceDescriptors = assembly
+                .DefinedTypes
+                .Where(type => type is { IsAbstract: false, IsInterface: false } && type.IsAssignableTo(typeof(IEndpoint)))
+                .Select(type => ServiceDescriptor.Transient(typeof(IEndpoint), type))
+                .ToArray();
+
+            services.TryAddEnumerable(serviceDescriptors);
+
+            return services;
+        }
+    }
+}
