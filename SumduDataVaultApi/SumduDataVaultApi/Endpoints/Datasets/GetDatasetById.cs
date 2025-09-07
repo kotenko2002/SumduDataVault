@@ -5,7 +5,7 @@ using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Endpoints.Abstractions;
 
-namespace SumduDataVaultApi.Endpoints
+namespace SumduDataVaultApi.Endpoints.Datasets
 {
     public static class GetDatasetById
     {
