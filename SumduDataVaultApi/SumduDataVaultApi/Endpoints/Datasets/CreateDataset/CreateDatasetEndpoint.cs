@@ -1,19 +1,20 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OpenSearch.Client;
 using OpenSearch.Net;
-using SumduDataVaultApi.Configs;
 using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using MapsterMapper;
 using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models;
 using ErrorOr;
 using Error = ErrorOr.Error;
 using Result = ErrorOr.Result;
+using SumduDataVaultApi.Infrastructure.Configs;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
 {
@@ -36,29 +37,37 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             IMapper mapper
         )
         {
-            var csvResult = await ProcessCsvFile(request.Csv);
-            if (csvResult.IsError)
+            try
             {
-                return Results.BadRequest(csvResult.Errors);
-            }
+                var csvResult = await ProcessCsvFile(request.Csv);
+                if (csvResult.IsError)
+                {
+                    return Results.BadRequest(csvResult.Errors);
+                }
 
-            var metadataResult = ProcessMetadata(request.MetadataJson);
-            if (metadataResult.IsError)
+                var metadataResult = ProcessMetadata(request.MetadataJson);
+                if (metadataResult.IsError)
+                {
+                    return Results.BadRequest(metadataResult.Errors);
+                }
+
+                var dataset = mapper.Map<Dataset>((request, csvResult.Value, metadataResult.Value));
+                context.Datasets.Add(dataset);
+                await context.SaveChangesAsync();
+
+                var indexingResult = await IndexDatasetInOpenSearch(dataset, openSearch, openSearchConfig.Value, mapper, logger);
+                if (indexingResult.IsError)
+                {
+                    return Results.Problem("Dataset saved, but indexing into OpenSearch failed.", statusCode: StatusCodes.Status502BadGateway);
+                }
+
+                return Results.Created($"/datasets/{dataset.Id}", new CreateDatasetResponse(dataset.Id));
+            }
+            catch (Exception e)
             {
-                return Results.BadRequest(metadataResult.Errors);
+                Console.WriteLine(e);
+                throw;
             }
-
-            var dataset = mapper.Map<Dataset>((request, csvResult.Value, metadataResult.Value));
-            context.Datasets.Add(dataset);
-            await context.SaveChangesAsync();
-
-            var indexingResult = await IndexDatasetInOpenSearch(dataset, openSearch, openSearchConfig.Value, mapper, logger);
-            if (indexingResult.IsError)
-            {
-                return Results.Problem("Dataset saved, but indexing into OpenSearch failed.", statusCode: StatusCodes.Status502BadGateway);
-            }
-
-            return Results.Created($"/datasets/{dataset.Id}", new CreateDatasetResponse(dataset.Id));
         }
 
         private static async Task<ErrorOr<CsvProcessingResult>> ProcessCsvFile(IFormFile csvFile)
@@ -79,7 +88,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
                 var lines = text.Replace("\r\n", "\n").Replace('\r', '\n')
                                 .Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 var first10 = lines.Take(10).ToArray();
-                var previewDoc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(first10));
+                var previewDoc = JArray.FromObject(first10);
 
                 return new CsvProcessingResult(csvBytes, checksum, lines.Length, previewDoc);
             }
@@ -89,13 +98,13 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             }
         }
 
-        private static ErrorOr<JsonDocument> ProcessMetadata(string? metadataJson)
+        private static ErrorOr<JObject> ProcessMetadata(string? metadataJson)
         {
             var metaRaw = string.IsNullOrWhiteSpace(metadataJson) ? "{}" : metadataJson;
             
             try
             {
-                return JsonDocument.Parse(metaRaw, new JsonDocumentOptions { AllowTrailingCommas = true });
+                return JObject.Parse(metaRaw);
             }
             catch (JsonException ex)
             {
@@ -113,7 +122,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             try
             {
                 var indexDoc = mapper.Map<DatasetIndexDoc>(dataset);
-                var json = JsonSerializer.Serialize(indexDoc, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonConvert.SerializeObject(indexDoc, Formatting.Indented);
 
                 var idxResp = await openSearch.LowLevel.IndexAsync<StringResponse>(
                     config.DefaultIndex,

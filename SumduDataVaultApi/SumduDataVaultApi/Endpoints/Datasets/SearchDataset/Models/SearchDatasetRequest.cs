@@ -1,4 +1,4 @@
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
 {
@@ -10,6 +10,6 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
         public DateTimeOffset? CollectedTo { get; init; }
         public int? RowCount { get; init; }
         public long? FileSizeBytes { get; init; }
-        public JsonElement? Metadata { get; init; }
+        public JObject? Metadata { get; init; }
     }
 }

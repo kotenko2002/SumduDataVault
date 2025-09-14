@@ -9,8 +9,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
         public void Register(TypeAdapterConfig config)
         {
             config.NewConfig<Dataset, GetDatasetByIdResponse>()
-                .Map(dest => dest.PreviewLines, src => src.PreviewLines.RootElement.Clone())
-                .Map(dest => dest.Metadata, src => src.Metadata.RootElement.Clone());
+                .Map(dest => dest.PreviewLines, src => src.PreviewLines)
+                .Map(dest => dest.Metadata, src => src.Metadata);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+﻿using Newtonsoft.Json.Linq;
 
 namespace SumduDataVaultApi.DataAccess.Entities
 {
@@ -10,13 +10,13 @@ namespace SumduDataVaultApi.DataAccess.Entities
         public int RowCount { get; set; }
         public long FileSizeBytes { get; set; }
 
-        public required JsonDocument PreviewLines { get; set; }
+        public required JArray PreviewLines { get; set; }
 
         public string Description { get; set; } = null!;
         public string? Region { get; set; }
         public DateTimeOffset CollectedFrom { get; set; }
         public DateTimeOffset CollectedTo { get; set; }
-        public required JsonDocument Metadata { get; set; }
+        public required JObject Metadata { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
         public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.Now;

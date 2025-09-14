@@ -1,21 +1,21 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SumduDataVaultApi.Dtos
 {
     public sealed record DatasetIndexDoc
     {
         [JsonIgnore] public long Id { get; init; }
-        [JsonPropertyName("fileName")] public string FileName { get; init; } = default!;
-        [JsonPropertyName("checksumSha256")] public string ChecksumSha256 { get; init; } = default!;
-        [JsonPropertyName("description")] public string Description { get; init; } = default!;
-        [JsonPropertyName("region")] public string? Region { get; init; }
-        [JsonPropertyName("collectedFrom")] public DateTimeOffset CollectedFrom { get; init; }
-        [JsonPropertyName("collectedTo")] public DateTimeOffset CollectedTo { get; init; }
-        [JsonPropertyName("rowCount")] public int RowCount { get; init; }
-        [JsonPropertyName("fileSizeBytes")] public long FileSizeBytes { get; init; }
-        [JsonPropertyName("createdAt")] public DateTimeOffset CreatedAt { get; init; }
-        [JsonPropertyName("updatedAt")] public DateTimeOffset UpdatedAt { get; init; }
-        [JsonPropertyName("metadata")] public JsonElement? Metadata { get; init; }
+        [JsonProperty("fileName")] public string FileName { get; init; } = default!;
+        [JsonProperty("checksumSha256")] public string ChecksumSha256 { get; init; } = default!;
+        [JsonProperty("description")] public string Description { get; init; } = default!;
+        [JsonProperty("region")] public string? Region { get; init; }
+        [JsonProperty("collectedFrom")] public DateTimeOffset CollectedFrom { get; init; }
+        [JsonProperty("collectedTo")] public DateTimeOffset CollectedTo { get; init; }
+        [JsonProperty("rowCount")] public int RowCount { get; init; }
+        [JsonProperty("fileSizeBytes")] public long FileSizeBytes { get; init; }
+        [JsonProperty("createdAt")] public DateTimeOffset CreatedAt { get; init; }
+        [JsonProperty("updatedAt")] public DateTimeOffset UpdatedAt { get; init; }
+        [JsonProperty("metadata")] public JObject? Metadata { get; init; }
     }
 }

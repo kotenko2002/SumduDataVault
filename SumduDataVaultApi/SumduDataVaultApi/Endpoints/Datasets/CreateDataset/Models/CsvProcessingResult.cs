@@ -1,4 +1,4 @@
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models
 {
@@ -6,6 +6,6 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models
         byte[] CsvBytes,
         string Checksum,
         int RowCount,
-        JsonDocument PreviewDoc
+        JArray PreviewDoc
     );
 }

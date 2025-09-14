@@ -1,7 +1,7 @@
 using Mapster;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Dtos;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
@@ -11,7 +11,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
         public void Register(TypeAdapterConfig config)
         {
             config
-                .NewConfig<(CreateDatasetRequest Request, CsvProcessingResult CsvResult, JsonDocument Metadata), Dataset>()
+                .NewConfig<(CreateDatasetRequest Request, CsvProcessingResult CsvResult, JObject Metadata), Dataset>()
                 .Map(dest => dest.FileName, src =>
                     string.IsNullOrWhiteSpace(src.Request.Csv.FileName) ? "dataset.csv" : src.Request.Csv.FileName
                 ).Map(dest => dest.ChecksumSha256, src => src.CsvResult.Checksum)
@@ -29,7 +29,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
 
             config
                 .NewConfig<Dataset, DatasetIndexDoc>()
-                .Map(dest => dest.Metadata, src => src.Metadata.RootElement.Clone());
+                .Map(dest => dest.Metadata, src => src.Metadata);
         }
     }
 }

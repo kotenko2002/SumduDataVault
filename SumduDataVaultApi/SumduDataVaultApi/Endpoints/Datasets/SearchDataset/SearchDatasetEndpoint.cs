@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 using OpenSearch.Client;
-using SumduDataVaultApi.Configs;
 using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models;
-using System.Text.Json;
+using SumduDataVaultApi.Infrastructure.Configs;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
 {
@@ -113,9 +113,9 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
                 });
             }
 
-            if (request.Metadata.HasValue && request.Metadata.Value.ValueKind != JsonValueKind.Null)
+            if (request.Metadata != null)
             {
-                var metadataString = request.Metadata.Value.GetRawText();
+                var metadataString = request.Metadata.ToString();
                 mustQueries.Add(new MatchQuery
                 {
                     Field = "metadata",

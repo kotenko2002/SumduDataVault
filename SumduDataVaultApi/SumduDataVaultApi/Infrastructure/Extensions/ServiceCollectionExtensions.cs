@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using OpenSearch.Client;
 using OpenSearch.Client.JsonNetSerializer;
 using OpenSearch.Net;
-using SumduDataVaultApi.Configs;
 using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Endpoints;
+using SumduDataVaultApi.Infrastructure.Configs;
 using System.Reflection;
 
 namespace SumduDataVaultApi.Infrastructure.Extensions
@@ -32,7 +33,9 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
         public static IServiceCollection AddDbContext(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("Postgres")));
+            {
+                options.UseNpgsql(configuration.GetConnectionString("Postgres"));
+            });
 
             services.AddIdentity<User, IdentityRole<int>>()
                 .AddEntityFrameworkStores<AppDbContext>()

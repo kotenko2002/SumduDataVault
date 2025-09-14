@@ -1,4 +1,4 @@
-﻿namespace SumduDataVaultApi.Configs
+﻿namespace SumduDataVaultApi.Infrastructure.Configs
 {
     public class OpenSearchConfig
     {

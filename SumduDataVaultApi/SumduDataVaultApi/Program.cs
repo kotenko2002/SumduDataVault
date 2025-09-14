@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using OpenSearch.Client;
 using OpenSearch.Net;
 using SumduDataVaultApi.Infrastructure.Extensions;
-using SumduDataVaultApi.Configs;
+using SumduDataVaultApi.Infrastructure.Configs;
 
 namespace SumduDataVaultApi
 {
@@ -12,7 +13,12 @@ namespace SumduDataVaultApi
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+                    options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
+                });
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
