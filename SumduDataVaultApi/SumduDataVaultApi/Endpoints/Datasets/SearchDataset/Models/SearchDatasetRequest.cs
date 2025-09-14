@@ -1,5 +1,3 @@
-using Newtonsoft.Json.Linq;
-
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
 {
     public sealed record SearchDatasetRequest
@@ -8,8 +6,12 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
         public string? Region { get; init; }
         public DateTimeOffset? CollectedFrom { get; init; }
         public DateTimeOffset? CollectedTo { get; init; }
-        public int? RowCount { get; init; }
-        public long? FileSizeBytes { get; init; }
-        public JObject? Metadata { get; init; }
+        public RowCountRange? RowCount { get; init; }
+        public FileSizeRange? FileSizeBytes { get; init; }
+        public Dictionary<string, string> Metadata { get; init; } = new ();
     }
+
+    public sealed record RowCountRange(int? Min, int? Max);
+
+    public sealed record FileSizeRange(long? Min, long? Max);
 }

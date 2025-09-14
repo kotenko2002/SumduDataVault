@@ -60,21 +60,25 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
 
             if (!string.IsNullOrWhiteSpace(request.Description))
             {
-                mustQueries.Add(new MatchQuery
+                mustQueries.Add(new MultiMatchQuery
                 {
-                    Field = "description",
+                    Fields = new[] { "description^2", "description.fuzzy" },
                     Query = request.Description,
-                    Fuzziness = Fuzziness.Auto
+                    Fuzziness = Fuzziness.EditDistance(2),
+                    Type = TextQueryType.BestFields,
+                    Operator = Operator.Or
                 });
             }
 
             if (!string.IsNullOrWhiteSpace(request.Region))
             {
-                mustQueries.Add(new MatchQuery
+                mustQueries.Add(new MultiMatchQuery
                 {
-                    Field = "region",
+                    Fields = new[] { "region^3", "region.fuzzy" },
                     Query = request.Region,
-                    Fuzziness = Fuzziness.Auto
+                    Fuzziness = Fuzziness.EditDistance(1),
+                    Type = TextQueryType.BestFields,
+                    Operator = Operator.Or
                 });
             }
 
@@ -96,33 +100,60 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
                 });
             }
 
-            if (request.RowCount.HasValue)
+            if (request.RowCount != null && (request.RowCount.Min.HasValue || request.RowCount.Max.HasValue))
             {
-                mustQueries.Add(new TermQuery
+                var rowCountQuery = new NumericRangeQuery
                 {
-                    Field = "rowCount",
-                    Value = request.RowCount.Value
-                });
+                    Field = "rowCount"
+                };
+                
+                if (request.RowCount.Min.HasValue)
+                    rowCountQuery.GreaterThanOrEqualTo = request.RowCount.Min.Value;
+                    
+                if (request.RowCount.Max.HasValue)
+                    rowCountQuery.LessThanOrEqualTo = request.RowCount.Max.Value;
+                    
+                mustQueries.Add(rowCountQuery);
             }
 
-            if (request.FileSizeBytes.HasValue)
+            if (request.FileSizeBytes != null && (request.FileSizeBytes.Min.HasValue || request.FileSizeBytes.Max.HasValue))
             {
-                mustQueries.Add(new TermQuery
+                var fileSizeQuery = new NumericRangeQuery
                 {
-                    Field = "fileSizeBytes",
-                    Value = request.FileSizeBytes.Value
-                });
+                    Field = "fileSizeBytes"
+                };
+                
+                if (request.FileSizeBytes.Min.HasValue)
+                    fileSizeQuery.GreaterThanOrEqualTo = request.FileSizeBytes.Min.Value;
+                    
+                if (request.FileSizeBytes.Max.HasValue)
+                    fileSizeQuery.LessThanOrEqualTo = request.FileSizeBytes.Max.Value;
+                    
+                mustQueries.Add(fileSizeQuery);
             }
 
-            if (request.Metadata != null)
+            if (request.Metadata.Any())
             {
-                var metadataString = request.Metadata.ToString();
-                mustQueries.Add(new MatchQuery
+                var shouldQueries = new List<QueryContainer>();
+                
+                foreach (var (key, value) in request.Metadata)
                 {
-                    Field = "metadata",
-                    Query = metadataString,
-                    Fuzziness = Fuzziness.Auto
-                });
+                    shouldQueries.Add(new MatchQuery
+                    {
+                        Field = $"metadata.{key}",
+                        Query = value,
+                        Fuzziness = Fuzziness.EditDistance(1)
+                    });
+                }
+                
+                if (shouldQueries.Any())
+                {
+                    mustQueries.Add(new BoolQuery
+                    {
+                        Should = shouldQueries,
+                        MinimumShouldMatch = 1
+                    });
+                }
             }
 
             var searchRequest = new SearchRequest<DatasetIndexDoc>(indexName);
