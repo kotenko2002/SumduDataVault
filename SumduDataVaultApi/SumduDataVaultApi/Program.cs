@@ -48,14 +48,11 @@ namespace SumduDataVaultApi
                     {
                       ""mappings"": {
                         ""properties"": {
-                          ""fileName"":        { ""type"": ""keyword"" },
-                          ""checksumSha256"":  { ""type"": ""keyword"" },
                           ""description"":     { ""type"": ""text""    },
                           ""region"":          { ""type"": ""keyword"" },
                           ""collectedFrom"":   { ""type"": ""date""    },
                           ""collectedTo"":     { ""type"": ""date""    },
                           ""createdAt"":       { ""type"": ""date""    },
-                          ""updatedAt"":       { ""type"": ""date""    },
                           ""rowCount"":        { ""type"": ""integer"" },
                           ""fileSizeBytes"":   { ""type"": ""long""    },
                           ""metadata"":        { ""type"": ""flat_object"" }

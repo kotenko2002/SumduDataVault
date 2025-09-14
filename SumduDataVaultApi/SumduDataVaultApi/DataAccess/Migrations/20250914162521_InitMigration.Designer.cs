@@ -13,8 +13,8 @@ using SumduDataVaultApi.DataAccess;
 namespace SumduDataVaultApi.DataAccess.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250914130020_TestGlobalReg")]
-    partial class TestGlobalReg
+    [Migration("20250914162521_InitMigration")]
+    partial class InitMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

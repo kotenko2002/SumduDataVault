@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Newtonsoft.Json.Linq;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
@@ -67,12 +67,12 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                     CsvContent = table.Column<byte[]>(type: "bytea", nullable: false),
                     RowCount = table.Column<int>(type: "integer", nullable: false),
                     FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
-                    PreviewLines = table.Column<JsonDocument>(type: "jsonb", nullable: false),
+                    PreviewLines = table.Column<JArray>(type: "jsonb", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: false),
                     Region = table.Column<string>(type: "text", nullable: true),
                     CollectedFrom = table.Column<DateTimeOffset>(type: "timestamptz", nullable: false),
                     CollectedTo = table.Column<DateTimeOffset>(type: "timestamptz", nullable: false),
-                    Metadata = table.Column<JsonDocument>(type: "jsonb", nullable: false),
+                    Metadata = table.Column<JObject>(type: "jsonb", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamptz", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamptz", nullable: false)
                 },
