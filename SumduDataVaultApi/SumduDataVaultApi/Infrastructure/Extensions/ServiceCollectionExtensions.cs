@@ -32,9 +32,17 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
 
         public static IServiceCollection AddDbContext(this IServiceCollection services, IConfiguration configuration)
         {
+            var connString = configuration.GetConnectionString("Postgres");
+
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connString);
+            dataSourceBuilder.UseJsonNet();
+            var dataSource = dataSourceBuilder.Build();
+
+            services.AddSingleton(dataSource);
+
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseNpgsql(configuration.GetConnectionString("Postgres"));
+                options.UseNpgsql(dataSource);
             });
 
             services.AddIdentity<User, IdentityRole<int>>()

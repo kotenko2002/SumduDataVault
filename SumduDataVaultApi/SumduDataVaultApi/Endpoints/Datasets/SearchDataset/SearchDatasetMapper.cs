@@ -1,4 +1,5 @@
 using Mapster;
+using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
@@ -7,8 +8,9 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
     {
         public void Register(TypeAdapterConfig config)
         {
-            // Маппер не потрібен для цього ендпоінту, оскільки ми працюємо напряму з OpenSearch
-            // Але залишаємо клас для майбутнього використання
+            config
+                .NewConfig<DatasetIndexDoc, SearchDatasetItem>()
+                .Map(dest => dest.Metadata, src => src.Metadata != null ? src.Metadata.ToString() : null);
         }
     }
 }

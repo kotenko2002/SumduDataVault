@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SumduDataVaultApi.DataAccess.Entities;
-using SumduDataVaultApi.DataAccess.Converters;
 
 namespace SumduDataVaultApi.DataAccess.Configurations
 {
@@ -19,8 +18,7 @@ namespace SumduDataVaultApi.DataAccess.Configurations
 
             builder.Property(x => x.PreviewLines)
                 .IsRequired()
-                .HasColumnType("jsonb")
-                .HasConversion(new JArrayConverter());
+                .HasColumnType("jsonb");
         
             builder.Property(x => x.Description).IsRequired();
             builder.Property(x => x.CollectedFrom).HasColumnType("timestamptz");
@@ -28,8 +26,7 @@ namespace SumduDataVaultApi.DataAccess.Configurations
             
             builder.Property(x => x.Metadata)
                 .IsRequired()
-                .HasColumnType("jsonb")
-                .HasConversion(new JObjectConverter());
+                .HasColumnType("jsonb");
 
             builder.Property(x => x.CreatedAt).HasColumnType("timestamptz");
             builder.Property(x => x.UpdatedAt).HasColumnType("timestamptz");

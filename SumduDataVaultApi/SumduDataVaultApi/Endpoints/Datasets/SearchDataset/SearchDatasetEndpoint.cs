@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using OpenSearch.Client;
 using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models;
 using SumduDataVaultApi.Infrastructure.Configs;
+using Mapster;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
 {
@@ -35,7 +35,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
                     return Results.Problem("Search failed", statusCode: StatusCodes.Status502BadGateway);
                 }
 
-                var datasets = response.Documents.ToList();
+                var datasets = response.Documents.Adapt<List<SearchDatasetItem>>();
+                
                 var totalCount = (int)response.Total;
 
                 var searchResponse = new SearchDatasetResponse
