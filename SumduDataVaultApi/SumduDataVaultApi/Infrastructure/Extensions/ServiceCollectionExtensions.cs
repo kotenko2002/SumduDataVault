@@ -36,14 +36,8 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
 
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connString);
             dataSourceBuilder.UseJsonNet();
-            var dataSource = dataSourceBuilder.Build();
 
-            services.AddSingleton(dataSource);
-
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseNpgsql(dataSource);
-            });
+            services.AddDbContext<AppDbContext>(options => options.UseNpgsql(dataSourceBuilder.Build()));
 
             services.AddIdentity<User, IdentityRole<int>>()
                 .AddEntityFrameworkStores<AppDbContext>()
@@ -66,7 +60,7 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
 
                 var settings = new ConnectionSettings(pool, (builtin, s) => new JsonNetSerializer(builtin, s))
                     .DefaultIndex(config.DefaultIndex)
-                    .BasicAuthentication(config.Username, config.Password);
+                    .BasicAuthentication(config.Credentials.Username, config.Credentials.Password);
 
                 if (config.AllowInvalidCertificate)
                 {
