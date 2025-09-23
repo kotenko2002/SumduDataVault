@@ -210,7 +210,41 @@ namespace SumduDataVaultApi.DataAccess.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Datasets");
+                    b.ToTable("Dataset");
+                });
+
+            modelBuilder.Entity("SumduDataVaultApi.DataAccess.Entities.DatasetMetadata", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("DatasetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Field")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatasetId");
+
+                    b.HasIndex("Field");
+
+                    b.HasIndex("Value");
+
+                    b.HasIndex("Field", "Value");
+
+                    b.ToTable("DatasetMetadata");
                 });
 
             modelBuilder.Entity("SumduDataVaultApi.DataAccess.Entities.User", b =>
@@ -337,6 +371,20 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SumduDataVaultApi.DataAccess.Entities.DatasetMetadata", b =>
+                {
+                    b.HasOne("SumduDataVaultApi.DataAccess.Entities.Dataset", null)
+                        .WithMany("MetadataItems")
+                        .HasForeignKey("DatasetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SumduDataVaultApi.DataAccess.Entities.Dataset", b =>
+                {
+                    b.Navigation("MetadataItems");
                 });
 #pragma warning restore 612, 618
         }

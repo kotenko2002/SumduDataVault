@@ -1,4 +1,5 @@
 using Mapster;
+using Newtonsoft.Json.Linq;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models;
 
@@ -9,8 +10,11 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
         public void Register(TypeAdapterConfig config)
         {
             config.NewConfig<Dataset, GetDatasetByIdResponse>()
-                .Map(dest => dest.PreviewLines, src => src.PreviewLines)
-                .Map(dest => dest.Metadata, src => src.Metadata);
+                .Map(
+                    dest => dest.PreviewLines, 
+                    src => src.PreviewLines.Select(line => line.Value<string>()).ToList()
+                )
+                .Map(dest => dest.MetadataItems, src => src.MetadataItems);
         }
     }
 }

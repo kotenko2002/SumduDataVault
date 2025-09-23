@@ -52,7 +52,13 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
                 }
 
                 var dataset = mapper.Map<Dataset>((request, csvResult.Value, metadataResult.Value));
-                context.Datasets.Add(dataset);
+                
+                context.Dataset.Add(dataset);
+                await context.SaveChangesAsync();
+                
+                // Create metadata items from the JSON metadata after dataset is saved
+                var metadataItems = CreateMetadataItems(dataset, metadataResult.Value);
+                context.DatasetMetadata.AddRange(metadataItems);
                 await context.SaveChangesAsync();
 
                 var indexingResult = await IndexDatasetInOpenSearch(dataset, openSearch, openSearchConfig.Value, mapper, logger);
@@ -112,6 +118,27 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             }
         }
 
+        private static List<DatasetMetadata> CreateMetadataItems(Dataset dataset, JObject metadata)
+        {
+            var metadataItems = new List<DatasetMetadata>();
+            
+            foreach (var property in metadata.Properties())
+            {
+                var value = property.Value?.ToString() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    metadataItems.Add(new DatasetMetadata
+                    {
+                        DatasetId = dataset.Id, // Will be set after save
+                        Field = property.Name,
+                        Value = value
+                    });
+                }
+            }
+            
+            return metadataItems;
+        }
+
         private static async Task<ErrorOr<Success>> IndexDatasetInOpenSearch(
             Dataset dataset,
             IOpenSearchClient openSearch,
@@ -126,7 +153,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
 
                 var idxResp = await openSearch.LowLevel.IndexAsync<StringResponse>(
                     config.DefaultIndex,
-                    dataset.Id.ToString(),
+                    Guid.NewGuid().ToString(),
                     PostData.String(json)
                 );
 

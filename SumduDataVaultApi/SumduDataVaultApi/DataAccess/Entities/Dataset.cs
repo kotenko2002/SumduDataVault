@@ -18,6 +18,8 @@ namespace SumduDataVaultApi.DataAccess.Entities
         public DateTimeOffset CollectedTo { get; set; }
         public required JObject Metadata { get; set; }
 
+        public ICollection<DatasetMetadata> MetadataItems { get; set; } = new List<DatasetMetadata>();
+
         public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
         public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.Now;
     }

@@ -29,6 +29,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
 
             config
                 .NewConfig<Dataset, DatasetIndexDoc>()
+                .Map(dest => dest.DatabaseId, src => src.Id)
                 .Map(dest => dest.Metadata, src => src.Metadata);
         }
     }

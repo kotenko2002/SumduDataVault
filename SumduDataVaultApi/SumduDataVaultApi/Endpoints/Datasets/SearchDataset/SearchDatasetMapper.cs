@@ -10,6 +10,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
         {
             config
                 .NewConfig<DatasetIndexDoc, SearchDatasetItem>()
+                .Map(dest => dest.Id, src => src.DatabaseId)
                 .Map(dest => dest.Metadata, src => src.Metadata != null ? src.Metadata.ToString() : null);
         }
     }

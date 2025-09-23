@@ -5,7 +5,7 @@ namespace SumduDataVaultApi.Dtos
 {
     public sealed record DatasetIndexDoc
     {
-        [JsonIgnore] public long Id { get; init; }
+        [JsonProperty("databaseId")] public string DatabaseId { get; init; } = default!;
         [JsonProperty("description")] public string Description { get; init; } = default!;
         [JsonProperty("region")] public string? Region { get; init; }
         [JsonProperty("collectedFrom")] public DateTimeOffset CollectedFrom { get; init; }

@@ -57,7 +57,7 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Datasets",
+                name: "Dataset",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
@@ -78,7 +78,7 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Datasets", x => x.Id);
+                    table.PrimaryKey("PK_Dataset", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -187,6 +187,27 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "DatasetMetadata",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    DatasetId = table.Column<long>(type: "bigint", nullable: false),
+                    Field = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    Value = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DatasetMetadata", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DatasetMetadata_Dataset_DatasetId",
+                        column: x => x.DatasetId,
+                        principalTable: "Dataset",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -223,6 +244,26 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DatasetMetadata_DatasetId",
+                table: "DatasetMetadata",
+                column: "DatasetId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DatasetMetadata_Field",
+                table: "DatasetMetadata",
+                column: "Field");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DatasetMetadata_Field_Value",
+                table: "DatasetMetadata",
+                columns: new[] { "Field", "Value" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DatasetMetadata_Value",
+                table: "DatasetMetadata",
+                column: "Value");
         }
 
         /// <inheritdoc />
@@ -244,13 +285,16 @@ namespace SumduDataVaultApi.DataAccess.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Datasets");
+                name: "DatasetMetadata");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Dataset");
         }
     }
 }

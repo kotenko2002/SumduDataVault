@@ -21,6 +21,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
         {
             var ds = await context.Set<Dataset>()
                 .AsNoTracking()
+                    .Include(x => x.MetadataItems)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (ds is null)

@@ -7,7 +7,8 @@ namespace SumduDataVaultApi.DataAccess
 {
     public class AppDbContext(DbContextOptions<AppDbContext> opts) : IdentityDbContext<User, IdentityRole<int>, int>(opts)
     {
-        public virtual DbSet<Dataset> Datasets => Set<Dataset>();
+        public virtual DbSet<Dataset> Dataset => Set<Dataset>();
+        public virtual DbSet<DatasetMetadata> DatasetMetadata => Set<DatasetMetadata>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

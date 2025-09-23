@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using SumduDataVaultApi.DataAccess.Entities;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
 {
@@ -12,8 +12,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
         string? Region,
         DateTimeOffset CollectedFrom,
         DateTimeOffset CollectedTo,
-        JArray PreviewLines,
-        JObject Metadata,
+        List<string> PreviewLines,
+        ICollection<DatasetMetadata> MetadataItems,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt
     );

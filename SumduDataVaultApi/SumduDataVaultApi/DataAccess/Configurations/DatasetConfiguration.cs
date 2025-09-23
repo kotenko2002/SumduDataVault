@@ -30,6 +30,11 @@ namespace SumduDataVaultApi.DataAccess.Configurations
 
             builder.Property(x => x.CreatedAt).HasColumnType("timestamptz");
             builder.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+
+            builder.HasMany(x => x.MetadataItems)
+                   .WithOne()
+                   .HasForeignKey(x => x.DatasetId)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

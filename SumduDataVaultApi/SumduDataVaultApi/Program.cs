@@ -16,6 +16,7 @@ namespace SumduDataVaultApi
             builder.Services.AddControllers()
                 .AddNewtonsoftJson(options =>
                 {
+                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
                     options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
                     options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
                 });
@@ -48,6 +49,7 @@ namespace SumduDataVaultApi
                     {
                       ""mappings"": {
                         ""properties"": {
+                          ""databaseId"":      { ""type"": ""keyword"" },
                           ""description"":     { ""type"": ""text""    },
                           ""region"":          { ""type"": ""keyword"" },
                           ""collectedFrom"":   { ""type"": ""date""    },
