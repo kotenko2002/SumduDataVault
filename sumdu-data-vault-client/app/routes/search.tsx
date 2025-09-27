@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { ChevronDown, ChevronUp, Search as SearchComponent, X, Info } from "lucide-react";
 import SearchDatasetService, { type SearchDatasetRequest } from "~/services/api/datasets/SearchDatasetService";
+import { MetadataFieldAutocomplete } from "~/components/MetadataFieldAutocomplete";
+import { MetadataValueAutocomplete } from "~/components/MetadataValueAutocomplete";
 
 interface MetadataField {
   id: string;
@@ -299,21 +301,19 @@ export default function Search() {
                   {metadataFields.map((field) => (
                     <div key={field.id} className="flex gap-2">
                       <div className="flex-1">
-                        <Input
-                          id={`metadata-key-${field.id}`}
-                          placeholder="Назва поля"
+                        <MetadataFieldAutocomplete
                           value={field.key}
-                          onChange={(e) => updateMetadataField(field.id, 'key', e.target.value)}
-                          className="h-9"
+                          onChange={(value) => updateMetadataField(field.id, 'key', value)}
+                          placeholder="Назва поля"
                         />
                       </div>
                       <div className="flex-1">
-                        <Input
-                          id={`metadata-value-${field.id}`}
-                          placeholder="Значення"
+                        <MetadataValueAutocomplete
                           value={field.value}
-                          onChange={(e) => updateMetadataField(field.id, 'value', e.target.value)}
-                          className="h-9"
+                          onChange={(value) => updateMetadataField(field.id, 'value', value)}
+                          fieldName={field.key}
+                          placeholder="Значення"
+                          disabled={!field.key.trim()}
                         />
                       </div>
                       <Button

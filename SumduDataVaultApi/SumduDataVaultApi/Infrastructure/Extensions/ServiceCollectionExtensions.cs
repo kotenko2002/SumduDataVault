@@ -37,7 +37,14 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connString);
             dataSourceBuilder.UseJsonNet();
 
-            services.AddDbContext<AppDbContext>(options => options.UseNpgsql(dataSourceBuilder.Build()));
+            services.AddDbContext<AppDbContext>(options => 
+            {
+                options.UseNpgsql(dataSourceBuilder.Build());
+                options.ConfigureWarnings(warnings => 
+                {
+                    warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning);
+                });
+            });
 
             services.AddIdentity<User, IdentityRole<int>>()
                 .AddEntityFrameworkStores<AppDbContext>()
