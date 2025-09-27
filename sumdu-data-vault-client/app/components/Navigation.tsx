@@ -16,6 +16,11 @@ const navigationItems = [
     description: "Повернутися на головну сторінку"
   },
   {
+    title: "Пошук",
+    href: "/search",
+    description: "Пошук та фільтрація датасетів"
+  },
+  {
     title: "Форма",
     href: "/form",
     description: "Контактна форма з сучасними UI компонентами"
