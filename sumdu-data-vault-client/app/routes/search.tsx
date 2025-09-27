@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Route } from "./+types/search";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -32,7 +32,6 @@ export default function Search() {
   const [isMetadataFiltersOpen, setIsMetadataFiltersOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [metadataFields, setMetadataFields] = useState<MetadataField[]>([]);
   
   const [formData, setFormData] = useState<SearchDatasetRequest>({
@@ -107,7 +106,6 @@ export default function Search() {
     });
     setMetadataFields([]);
     setSearchResults([]);
-    setTotalCount(0);
   };
 
   const handleSearch = async () => {
@@ -136,7 +134,6 @@ export default function Search() {
 
       const result = await SearchDatasetService.searchDatasets(filteredData);
       setSearchResults(result.datasets);
-      setTotalCount(result.totalCount);
     } catch (error) {
       console.error('Помилка пошуку:', error);
     } finally {
@@ -144,13 +141,15 @@ export default function Search() {
     }
   };
 
+  // Автоматичний пошук при завантаженні сторінки
+  useEffect(() => {
+    handleSearch();
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Пошук датасетів</h1>
-        <p className="text-muted-foreground mt-2">
-          Знайдіть потрібні датасети за допомогою різних фільтрів
-        </p>
       </div>
 
       {/* Адаптивний макет: вертикальний для малих екранів, горизонтальний для великих */}
@@ -158,7 +157,7 @@ export default function Search() {
         {/* Бічна панель фільтрів - зліва на великих екранах */}
         <div className="lg:w-80 lg:flex-shrink-0 mb-6 lg:mb-0">
           <Card className="sticky top-4">
-            <CardHeader className="pb-4">
+            <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <SearchComponent className="h-4 w-4" />
                 Фільтри пошуку
@@ -369,11 +368,8 @@ export default function Search() {
           {/* Результати пошуку */}
           {searchResults.length > 0 && (
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader>
                 <CardTitle className="text-lg">Результати пошуку</CardTitle>
-                <CardDescription>
-                  Знайдено {totalCount} датасетів
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
