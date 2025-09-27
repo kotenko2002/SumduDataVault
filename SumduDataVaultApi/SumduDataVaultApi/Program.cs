@@ -23,6 +23,18 @@ namespace SumduDataVaultApi
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // CORS configuration
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend", policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
             builder.Services.AddMapping(builder.Configuration);
             builder.Services.AddDbContext(builder.Configuration);
             builder.Services.AddOpenSearch(builder.Configuration);
@@ -74,6 +86,7 @@ namespace SumduDataVaultApi
                 }
             });
 
+            app.UseCors("AllowFrontend");
             app.UseHttpsRedirection();
             app.UseAuthorization();
 
