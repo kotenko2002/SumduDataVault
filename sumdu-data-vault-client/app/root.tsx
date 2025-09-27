@@ -45,7 +45,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <main className="min-h-screen">
+    <main>
       <Outlet />
     </main>
   );

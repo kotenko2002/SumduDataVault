@@ -21,11 +21,6 @@ const navigationItems = [
     description: "Пошук та фільтрація датасетів"
   },
   {
-    title: "Форма",
-    href: "/form",
-    description: "Контактна форма з сучасними UI компонентами"
-  },
-  {
     title: "Створити датасет",
     href: "/create-dataset",
     description: "Створення нового датасету з CSV файлом"
