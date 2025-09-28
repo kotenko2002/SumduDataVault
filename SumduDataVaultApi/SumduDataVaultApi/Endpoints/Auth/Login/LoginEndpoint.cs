@@ -38,7 +38,6 @@ namespace SumduDataVaultApi.Endpoints.Auth.Login
 
                 var userRoles = await userManager.GetRolesAsync(user);
 
-                var jwtConfig = jwtOptions.Value;
                 var authClaims = new List<Claim>
                 {
                     new("userId", user.Id.ToString()),

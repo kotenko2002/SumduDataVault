@@ -126,15 +126,29 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
         {
             return services.AddSwaggerGen(options =>
             {
-                options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+                options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme
                 {
-                    Description = "Standard Authorization header using the Bearer scheme (\"Bearer {token}\")",
-                    In = ParameterLocation.Header,
                     Name = "Authorization",
-                    Type = SecuritySchemeType.ApiKey
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "JWT Authorization header using the Bearer scheme."
                 });
-
-                options.OperationFilter<SecurityRequirementsOperationFilter>();
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "bearerAuth"
+                            }
+                        },
+                        []
+                    }
+                });
             });
         }
 

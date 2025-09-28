@@ -1,6 +1,4 @@
-﻿using SumduDataVaultApi.DataAccess.Entities;
-
-namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
+﻿namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
 {
     public record GetDatasetByIdResponse(
         long Id,
@@ -13,7 +11,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
         DateTimeOffset CollectedFrom,
         DateTimeOffset CollectedTo,
         List<string> PreviewLines,
-        ICollection<DatasetMetadata> MetadataItems,
+        ICollection<DatasetMetadataDto> MetadataItems,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt
     );

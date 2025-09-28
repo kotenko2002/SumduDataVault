@@ -13,8 +13,9 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
                 .Map(
                     dest => dest.PreviewLines, 
                     src => src.PreviewLines.Select(line => line.Value<string>()).ToList()
-                )
-                .Map(dest => dest.MetadataItems, src => src.MetadataItems);
+                );
+
+            config.NewConfig<DatasetMetadata, DatasetMetadataDto>();
         }
     }
 }
