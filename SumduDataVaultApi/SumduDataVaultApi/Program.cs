@@ -21,9 +21,8 @@ namespace SumduDataVaultApi
                     options.SerializerSettings.DateFormatHandling = DateFormatHandling.IsoDateFormat;
                 });
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwagger();
 
-            // CORS configuration
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -39,6 +38,7 @@ namespace SumduDataVaultApi
             builder.Services.AddDbContext(builder.Configuration);
             builder.Services.AddOpenSearch(builder.Configuration);
 
+            builder.Services.AddAuthScheme(builder.Configuration);
             builder.Services.AddEndpoints(typeof(Program).Assembly);
 
             var app = builder.Build();
@@ -88,6 +88,8 @@ namespace SumduDataVaultApi
 
             app.UseCors("AllowFrontend");
             app.UseHttpsRedirection();
+
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();

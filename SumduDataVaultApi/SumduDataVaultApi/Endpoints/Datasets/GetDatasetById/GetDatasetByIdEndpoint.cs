@@ -14,7 +14,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
             app.MapGet("datasets/{id:long}", Handler)
                 .WithTags("Datasets")
                 .Produces<GetDatasetByIdResponse>()
-                .Produces(StatusCodes.Status404NotFound);
+                .Produces(StatusCodes.Status404NotFound)
+                .RequireAuthorization();
         }
 
         public static async Task<IResult> Handler([FromRoute] long id, AppDbContext context, IMapper mapper)
