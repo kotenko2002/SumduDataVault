@@ -144,74 +144,77 @@ export default function CreateDatasetForm() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Завантаження файлу */}
-          <Card>
-            <CardHeader>
-              <CardTitle>📁 Завантаження CSV файлу</CardTitle>
-              <CardDescription>
-                Виберіть CSV файл для створення датасету
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          {/* Основна інформація та Завантаження файлу в одному рядку */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Основна інформація - зліва */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📋 Основна інформація</CardTitle>
+                <CardDescription>
+                  Вкажіть опис та регіон датасету
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="csv">CSV файл *</Label>
-                  <Input
-                    id="csv"
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
+                  <Label htmlFor="description">Опис датасету *</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Детальний опис датасету, його призначення та зміст..."
+                    className="min-h-[100px]"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
                   />
-                  <p className="text-sm text-muted-foreground">
-                    Підтримуються тільки CSV файли
-                  </p>
                 </div>
-                {formData.csv && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      <strong>Вибраний файл:</strong> {formData.csv.name}
-                    </p>
-                    <p className="text-sm text-blue-600">
-                      Розмір: {(formData.csv.size / 1024).toFixed(2)} KB
+
+                <div className="space-y-2">
+                  <Label htmlFor="region">Регіон</Label>
+                  <Input
+                    id="region"
+                    placeholder="Введіть регіон (наприклад: Україна, Європа, Глобальний)"
+                    value={formData.region}
+                    onChange={(e) => handleInputChange("region", e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Завантаження файлу - справа */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📁 Завантаження CSV файлу</CardTitle>
+                <CardDescription>
+                  Виберіть CSV файл для створення датасету
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="csv">CSV файл *</Label>
+                    <Input
+                      id="csv"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                      className="cursor-pointer"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Підтримуються тільки CSV файли
                     </p>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Основна інформація */}
-          <Card>
-            <CardHeader>
-              <CardTitle>📋 Основна інформація</CardTitle>
-              <CardDescription>
-                Вкажіть опис та регіон датасету
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="description">Опис датасету *</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Детальний опис датасету, його призначення та зміст..."
-                  className="min-h-[100px]"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="region">Регіон</Label>
-                <Input
-                  id="region"
-                  placeholder="Введіть регіон (наприклад: Україна, Європа, Глобальний)"
-                  value={formData.region}
-                  onChange={(e) => handleInputChange("region", e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                  {formData.csv && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-800">
+                        <strong>Вибраний файл:</strong> {formData.csv.name}
+                      </p>
+                      <p className="text-sm text-blue-600">
+                        Розмір: {(formData.csv.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Період збору даних */}
           <Card>
