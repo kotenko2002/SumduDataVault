@@ -11,13 +11,15 @@ interface MetadataFieldAutocompleteProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function MetadataFieldAutocomplete({
   value,
   onChange,
   placeholder = "Назва поля",
-  className
+  className,
+  disabled = false
 }: MetadataFieldAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -87,7 +89,7 @@ export function MetadataFieldAutocomplete({
   }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div className="relative">
           <Input
@@ -100,6 +102,7 @@ export function MetadataFieldAutocomplete({
             }}
             placeholder={placeholder}
             className={cn("h-9", className)}
+            disabled={disabled}
           />
         </div>
       </PopoverTrigger>

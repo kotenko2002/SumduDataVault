@@ -15,7 +15,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.DownloadDataset
                 .WithDescription("Повертає CSV файл датасету за вказаним ID")
                 .Produces<FileResult>(StatusCodes.Status200OK, "text/csv")
                 .Produces(StatusCodes.Status404NotFound)
-                .RequireAuthorization();
+                //.RequireAuthorization()
+                ;
         }
 
         public static async Task<IResult> Handler([FromRoute] long id, AppDbContext context)
@@ -29,7 +30,6 @@ namespace SumduDataVaultApi.Endpoints.Datasets.DownloadDataset
                 return Results.NotFound();
             }
 
-            // Повертаємо файл з правильним MIME типом та іменем файлу
             return Results.File(
                 dataset.CsvContent,
                 "text/csv",

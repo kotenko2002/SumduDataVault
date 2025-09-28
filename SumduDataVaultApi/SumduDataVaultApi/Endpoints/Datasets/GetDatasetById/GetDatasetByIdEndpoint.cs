@@ -15,7 +15,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
                 .WithTags("Datasets")
                 .Produces<GetDatasetByIdResponse>()
                 .Produces(StatusCodes.Status404NotFound)
-                .RequireAuthorization();
+                //.RequireAuthorization()
+                ;
         }
 
         public static async Task<IResult> Handler([FromRoute] long id, AppDbContext context, IMapper mapper)
