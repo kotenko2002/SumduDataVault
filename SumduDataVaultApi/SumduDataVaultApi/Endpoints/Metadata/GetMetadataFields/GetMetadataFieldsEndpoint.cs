@@ -10,7 +10,8 @@ namespace SumduDataVaultApi.Endpoints.Metadata.GetMetadataFields
         {
             app.MapGet("metadata/fields", Handler)
                 .WithTags("Metadata")
-                .Produces<GetMetadataFieldsResponse>();
+                .Produces<GetMetadataFieldsResponse>()
+                .RequireAuthorization();
         }
 
         public static async Task<IResult> Handler(

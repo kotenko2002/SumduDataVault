@@ -25,7 +25,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             app.MapPost("datasets", Handler)
                .DisableAntiforgery()
                .WithTags("Datasets")
-               .Accepts<CreateDatasetRequest>("multipart/form-data");
+               .Accepts<CreateDatasetRequest>("multipart/form-data")
+               .RequireAuthorization();
         }
 
         public static async Task<IResult> Handler(

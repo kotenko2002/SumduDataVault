@@ -11,7 +11,8 @@ namespace SumduDataVaultApi.Endpoints.Metadata.GetMetadataValues
             app.MapGet("metadata/values", Handler)
                 .WithTags("Metadata")
                 .Produces<GetMetadataValuesResponse>()
-                .Produces(StatusCodes.Status400BadRequest);
+                .Produces(StatusCodes.Status400BadRequest)
+                .RequireAuthorization();
         }
 
         public static async Task<IResult> Handler(

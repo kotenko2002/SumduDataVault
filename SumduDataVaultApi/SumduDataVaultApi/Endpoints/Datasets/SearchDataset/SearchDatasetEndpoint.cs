@@ -15,7 +15,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
             app.MapPost("datasets/search", Handler)
                .WithTags("Datasets")
                .Accepts<SearchDatasetRequest>("application/json")
-               .Produces<SearchDatasetResponse>();
+               .Produces<SearchDatasetResponse>()
+               .RequireAuthorization();
         }
 
         public static async Task<IResult> Handler(

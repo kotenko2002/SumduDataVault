@@ -15,8 +15,15 @@ const apiClient: AxiosInstance = axios.create({
 // Інтерцептор для запитів
 apiClient.interceptors.request.use(
   (config) => {
-    // Додаємо логування для запитів
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token) {
+        config.headers = config.headers ?? {};
+        (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (_) {
+      // ігноруємо помилки доступу до localStorage
+    }
     return config;
   },
   (error) => {
@@ -28,8 +35,6 @@ apiClient.interceptors.request.use(
 // Інтерцептор для відповідей
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Додаємо логування для успішних відповідей
-    console.log(`API Response: ${response.status} ${response.config.url}`);
     return response;
   },
   (error) => {
