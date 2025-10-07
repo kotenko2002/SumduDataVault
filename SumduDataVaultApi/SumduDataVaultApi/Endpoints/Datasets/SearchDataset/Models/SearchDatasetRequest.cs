@@ -9,6 +9,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
         public RowCountRange? RowCount { get; init; }
         public FileSizeRange? FileSizeBytes { get; init; }
         public Dictionary<string, string> Metadata { get; init; } = new ();
+        public int Page { get; init; } = 1;
+        public int PageSize { get; init; } = 10;
     }
 
     public sealed record RowCountRange(int? Min, int? Max);

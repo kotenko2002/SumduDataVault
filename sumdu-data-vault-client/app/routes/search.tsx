@@ -11,6 +11,7 @@ import { ChevronDown, ChevronUp, Search as SearchComponent, X, Info } from "luci
 import SearchDatasetService, { type SearchDatasetRequest } from "~/services/api/datasets/SearchDatasetService";
 import { MetadataFieldAutocomplete } from "~/components/MetadataFieldAutocomplete";
 import { MetadataValueAutocomplete } from "~/components/MetadataValueAutocomplete";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "~/components/ui/pagination";
 
 interface MetadataField {
   id: string;
@@ -33,6 +34,10 @@ export default function Search() {
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [metadataFields, setMetadataFields] = useState<MetadataField[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
   
   const [formData, setFormData] = useState<SearchDatasetRequest>({
     description: "",
@@ -106,12 +111,14 @@ export default function Search() {
     });
     setMetadataFields([]);
     setSearchResults([]);
+    setTotalCount(0);
+    setPage(1);
+    setTotalPages(0);
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (nextPage?: number) => {
     setIsLoading(true);
     try {
-      // Фільтруємо порожні значення
       const filteredData: SearchDatasetRequest = {};
       
       if (formData.description?.trim()) filteredData.description = formData.description.trim();
@@ -132,8 +139,16 @@ export default function Search() {
         filteredData.metadata = metadataFromFields;
       }
 
+      const effectivePage = nextPage ?? page;
+      filteredData.page = effectivePage;
+      filteredData.pageSize = pageSize;
+
       const result = await SearchDatasetService.searchDatasets(filteredData);
       setSearchResults(result.datasets);
+      setTotalCount(result.totalCount);
+      setPage(result.page);
+      setPageSize(result.pageSize);
+      setTotalPages(result.totalPages);
     } catch (error) {
       console.error('Помилка пошуку:', error);
     } finally {
@@ -143,8 +158,41 @@ export default function Search() {
 
   // Автоматичний пошук при завантаженні сторінки
   useEffect(() => {
-    handleSearch();
+    handleSearch(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const goToPrev = () => {
+    if (page > 1) {
+      handleSearch(page - 1);
+    }
+  };
+
+  const goToNext = () => {
+    if (page < totalPages) {
+      handleSearch(page + 1);
+    }
+  };
+
+  const goToPage = (p: number) => {
+    if (p >= 1 && p <= totalPages) {
+      handleSearch(p);
+    }
+  };
+
+  // Формування простого списку сторінок (1 .. totalPages) з обрізанням
+  const renderPageNumbers = () => {
+    const pages: number[] = [];
+    const maxButtons = 5;
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      const start = Math.max(1, page - 2);
+      const end = Math.min(totalPages, start + maxButtons - 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+    }
+    return pages;
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -352,7 +400,7 @@ export default function Search() {
 
               {/* Кнопки дій */}
               <div className="flex gap-2 pt-2">
-                <Button onClick={handleSearch} disabled={isLoading} className="flex-1 h-9">
+                <Button onClick={() => handleSearch(1)} disabled={isLoading} className="flex-1 h-9">
                   {isLoading ? "Пошук..." : "Шукати"}
                 </Button>
                 <Button variant="outline" onClick={clearFilters} className="h-9">
@@ -370,6 +418,9 @@ export default function Search() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Результати пошуку</CardTitle>
+                <CardDescription>
+                  Знайдено {totalCount.toLocaleString()} записів
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -468,6 +519,29 @@ export default function Search() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Пагінація */}
+                {totalPages > 1 && (
+                  <div className="mt-4">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious onClick={goToPrev} className={page === 1 ? 'pointer-events-none opacity-50' : ''} />
+                        </PaginationItem>
+                        {renderPageNumbers().map((p) => (
+                          <PaginationItem key={p}>
+                            <PaginationLink isActive={p === page} onClick={() => goToPage(p)}>
+                              {p}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext onClick={goToNext} className={page === totalPages ? 'pointer-events-none opacity-50' : ''} />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
