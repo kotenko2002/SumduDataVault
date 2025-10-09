@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import { Navigation } from "./components/Navigation";
 import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from "./components/ui/sonner";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -40,6 +41,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
           <ScrollRestoration />
           <Scripts />
+          <Toaster richColors position="bottom-right" />
         </AuthProvider>
       </body>
     </html>

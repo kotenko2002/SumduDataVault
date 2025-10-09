@@ -5,7 +5,6 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Toaster } from "~/components/ui/sonner";
 import { toast } from "sonner";
 import CreateDatasetService from "~/services/api/datasets/CreateDatasetService";
 
@@ -352,7 +351,6 @@ export default function CreateDatasetForm() {
           </div>
         </form>
       </div>
-      <Toaster richColors position="top-right" />
     </div>
   );
 }

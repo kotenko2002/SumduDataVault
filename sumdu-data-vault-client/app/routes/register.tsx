@@ -6,7 +6,6 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import RegisterService from "~/services/api/auth/RegisterService";
-import { Toaster } from "~/components/ui/sonner";
 import { toast } from "sonner";
 
 export function meta({}: Route.MetaArgs) {
@@ -97,7 +96,6 @@ export default function Register() {
           </CardContent>
         </Card>
       </div>
-      <Toaster richColors position="top-right" />
     </div>
   );
 }

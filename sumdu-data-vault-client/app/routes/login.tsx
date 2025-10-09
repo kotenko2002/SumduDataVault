@@ -6,7 +6,6 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import LoginService from "~/services/api/auth/LoginService";
-import { Toaster } from "~/components/ui/sonner";
 import { toast } from "sonner";
 import { useAuth } from "~/context/AuthContext";
 
@@ -79,7 +78,6 @@ export default function Login() {
           </CardContent>
         </Card>
       </div>
-      <Toaster richColors position="top-right" />
     </div>
   );
 }
