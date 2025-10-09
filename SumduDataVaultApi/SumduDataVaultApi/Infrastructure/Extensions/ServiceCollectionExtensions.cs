@@ -52,7 +52,7 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
                 });
             });
 
-            services.AddIdentity<User, IdentityRole<int>>()
+            services.AddIdentity<User, IdentityRole<long>>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders()
                 .AddErrorDescriber<UkrainianIdentityErrorDescriber>();
