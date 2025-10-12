@@ -22,6 +22,7 @@ interface CreateDatasetRequest {
   collectedFrom: string;
   collectedTo: string;
   metadata: Array<{ key: string; value: string }>;
+  userJustification: string;
 }
 
 interface MetadataField {
@@ -32,6 +33,7 @@ interface MetadataField {
 
 interface CreateDatasetResponse {
   id: number;
+  approvalRequestId: number;
 }
 
 export default function CreateDatasetForm() {
@@ -42,6 +44,7 @@ export default function CreateDatasetForm() {
     collectedFrom: "",
     collectedTo: "",
     metadata: [],
+    userJustification: "",
   });
 
   const [metadataFields, setMetadataFields] = useState<MetadataField[]>([]);
@@ -109,6 +112,7 @@ export default function CreateDatasetForm() {
         CollectedFrom: formData.collectedFrom,
         CollectedTo: formData.collectedTo,
         MetadataJson: convertMetadataToJson(),
+        UserJustification: formData.userJustification.trim(),
       });
       
       // Очищаємо форму одразу
@@ -119,10 +123,11 @@ export default function CreateDatasetForm() {
         collectedFrom: "",
         collectedTo: "",
         metadata: [],
+        userJustification: "",
       });
       setMetadataFields([]);
       
-      toast.success(`Датасет успішно створено! ID: ${result.id}`);
+      toast.success(`Датасет створено (ID: ${result.id}). Запит на апрув створено (ID: ${result.approvalRequestId}).`);
 
     } catch (err) {
       toast.error(`Помилка при створенні датасету: ${err instanceof Error ? err.message : "Сталася невідома помилка"}`);
@@ -174,6 +179,18 @@ export default function CreateDatasetForm() {
                     onChange={(e) => handleInputChange("region", e.target.value)}
                   />
                 </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="userJustification">Обґрунтування запиту *</Label>
+                <Textarea
+                  id="userJustification"
+                  placeholder="Чому потрібно створити цей датасет або надати доступ"
+                  className="min-h-[80px]"
+                  value={formData.userJustification}
+                  onChange={(e) => handleInputChange("userJustification", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Мінімум 5 символів. Це поле потрібне для системи апрувів.</p>
+              </div>
               </CardContent>
             </Card>
 
@@ -326,7 +343,8 @@ export default function CreateDatasetForm() {
                   region: "",
                   collectedFrom: "",
                   collectedTo: "",
-                  metadata: [],
+                  metadata: [] as Array<{ key: string; value: string }>,
+                  userJustification: "",
                 });
                 setMetadataFields([]);
                 toast.info("Форма очищена");

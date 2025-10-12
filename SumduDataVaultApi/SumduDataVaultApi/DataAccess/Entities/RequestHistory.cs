@@ -9,7 +9,6 @@ namespace SumduDataVaultApi.DataAccess.Entities
         public string? Comments { get; set; }
         public DateTime Timestamp { get; set; }
 
-        // Foreign Keys
         public long ApprovalRequestId { get; set; }
         public virtual ApprovalRequest ApprovalRequest { get; set; }
 

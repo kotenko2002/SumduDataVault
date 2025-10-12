@@ -16,8 +16,8 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Filters;
 using System.Text;
+using SumduDataVaultApi.Services.Approvals;
 
 
 namespace SumduDataVaultApi.Infrastructure.Extensions
@@ -162,6 +162,13 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
 
             services.TryAddEnumerable(serviceDescriptors);
 
+            return services;
+        }
+
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        {
+            services.AddScoped<IApprovalService, ApprovalService>();
+            
             return services;
         }
     }

@@ -7,4 +7,10 @@ namespace SumduDataVaultApi.DataAccess.Entities
         public required string FirstName { get; set; }
         public required string LastName { get; set; }
     }
+
+    public static class Roles
+    {
+        public const string Admin = "Admin";
+        public const string Client = "Client";
+    }
 }

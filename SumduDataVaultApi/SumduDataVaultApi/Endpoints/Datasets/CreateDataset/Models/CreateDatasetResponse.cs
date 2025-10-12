@@ -1,4 +1,4 @@
 ﻿namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models
 {
-    public record CreateDatasetResponse(long Id);
+    public record CreateDatasetResponse(long Id, long ApprovalRequestId);
 }

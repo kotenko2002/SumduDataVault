@@ -43,6 +43,8 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register
                     return Results.BadRequest(errors);
                 }
 
+                await userManager.AddToRoleAsync(user, Roles.Admin); // TODO: replace with Roles.Client
+
                 return Results.Ok();
             }
             catch (Exception ex)

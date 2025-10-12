@@ -13,19 +13,19 @@ namespace SumduDataVaultApi.DataAccess.Configurations
             builder.Property(e => e.RequestType).IsRequired();
 
             builder.HasOne(e => e.RequestingUser)
-                .WithMany() // Assuming User doesn't have a navigation property back
+                .WithMany()
                 .HasForeignKey(e => e.RequestingUserId)
                 .IsRequired();
 
             builder.HasOne(e => e.Admin)
                 .WithMany()
                 .HasForeignKey(e => e.AdminId)
-                .IsRequired(false); // AdminId is nullable
+                .IsRequired(false);
 
             builder.HasOne(e => e.Dataset)
                 .WithMany()
                 .HasForeignKey(e => e.DatasetId)
-                .IsRequired(false); // DatasetId is nullable
+                .IsRequired(false);
         }
     }
 }

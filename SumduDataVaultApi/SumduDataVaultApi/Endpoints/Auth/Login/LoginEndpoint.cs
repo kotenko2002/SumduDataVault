@@ -41,6 +41,7 @@ namespace SumduDataVaultApi.Endpoints.Auth.Login
                 var authClaims = new List<Claim>
                 {
                     new("userId", user.Id.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email),
                     new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 };
                 authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));

@@ -1,4 +1,6 @@
-﻿namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
+﻿using SumduDataVaultApi.DataAccess.Enums;
+
+namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models
 {
     public record GetDatasetByIdResponse(
         long Id,
@@ -13,6 +15,7 @@
         List<string> PreviewLines,
         ICollection<DatasetMetadataDto> MetadataItems,
         DateTimeOffset CreatedAt,
-        DateTimeOffset UpdatedAt
+        DateTimeOffset UpdatedAt,
+        AccessStatus AccessStatus
     );
 }

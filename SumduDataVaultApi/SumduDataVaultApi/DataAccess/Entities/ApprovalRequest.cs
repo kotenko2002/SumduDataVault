@@ -21,5 +21,15 @@ namespace SumduDataVaultApi.DataAccess.Entities
         public virtual User? Admin { get; set; }
 
         public virtual ICollection<RequestHistory> History { get; set; }
+
+        /// <summary>
+        /// Перевіряє, чи є вказаний користувач власником цього запиту
+        /// </summary>
+        /// <param name="userId">ID користувача для перевірки</param>
+        /// <returns>true, якщо користувач є власником запиту</returns>
+        public bool IsOwner(long userId)
+        {
+            return RequestingUserId == userId;
+        }
     }
 }

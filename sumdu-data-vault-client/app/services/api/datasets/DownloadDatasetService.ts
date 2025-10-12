@@ -1,17 +1,6 @@
 import apiClient from '../apiClient';
 
 export class DownloadDatasetService {
-  static async downloadDataset(id: number): Promise<Blob> {
-    const response = await apiClient.get(`/datasets/${id}/download`, {
-      responseType: 'blob',
-      headers: {
-        'Accept': 'text/csv',
-      },
-    });
-
-    return response.data;
-  }
-
   static async downloadDatasetWithFilename(id: number): Promise<{ blob: Blob; filename: string }> {
     const response = await apiClient.get(`/datasets/${id}/download`, {
       responseType: 'blob',

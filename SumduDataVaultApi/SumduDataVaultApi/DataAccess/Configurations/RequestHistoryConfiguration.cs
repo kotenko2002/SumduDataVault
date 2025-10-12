@@ -11,7 +11,7 @@ namespace SumduDataVaultApi.DataAccess.Configurations
 
 
             builder.HasOne(e => e.ApprovalRequest)
-                .WithMany(r => r.History) // One-to-many relationship
+                .WithMany(r => r.History)
                 .HasForeignKey(e => e.ApprovalRequestId)
                 .IsRequired();
 
