@@ -35,6 +35,7 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register
                 }
 
                 var user = mapper.Map<User>(request);
+                user.MiddleName = "temp"; // TODO: remove
 
                 var result = await userManager.CreateAsync(user, request.Password);
                 if (!result.Succeeded)
@@ -43,7 +44,7 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register
                     return Results.BadRequest(errors);
                 }
 
-                await userManager.AddToRoleAsync(user, Roles.Admin); // TODO: replace with Roles.Client
+                await userManager.AddToRoleAsync(user, Roles.Client); // TODO: replace with Roles.Client
 
                 return Results.Ok();
             }

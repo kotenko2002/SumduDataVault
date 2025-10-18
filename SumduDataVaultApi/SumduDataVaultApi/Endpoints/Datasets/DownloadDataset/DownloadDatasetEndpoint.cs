@@ -44,9 +44,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.DownloadDataset
                 }
                 var userId = userIdResult.Value;
 
-                var roleResult = httpContext.User.GetRole();
-                var isAdmin = roleResult is { IsError: false, Value: Roles.Admin };
-
+                var isAdmin = httpContext.User.IsAdmin() is { IsError: false, Value: true };
                 if (!isAdmin)
                 {
                     var approvedRequest = await context.ApprovalRequest

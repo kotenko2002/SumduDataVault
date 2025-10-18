@@ -1,6 +1,7 @@
 ﻿using ErrorOr;
 using System.Net;
 using System.Security.Claims;
+using SumduDataVaultApi.DataAccess.Entities;
 
 namespace SumduDataVaultApi.Infrastructure.Extensions
 {
@@ -37,6 +38,18 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
             }
 
             return maybeString.Value;
+        }
+
+        public static ErrorOr<bool> IsAdmin(this ClaimsPrincipal principal)
+        {
+            var roleResult = GetRole(principal);
+            
+            if (roleResult.IsError)
+            {
+                return roleResult.Errors;
+            }
+            
+            return roleResult.Value == Roles.Admin;
         }
 
         private static ErrorOr<string> GetInfoByDataName(ClaimsPrincipal principal, string name)
