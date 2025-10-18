@@ -25,3 +25,12 @@ export interface ApprovalRequestDto {
   datasetName?: string;
   adminName?: string;
 }
+
+export interface ApprovalRequestFiltersDto {
+  requestType?: RequestType;
+  status?: RequestStatus;
+  createdFrom?: string; // ISO date string
+  createdTo?: string; // ISO date string
+  skip?: number;
+  take?: number;
+}
