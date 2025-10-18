@@ -23,6 +23,7 @@ import GetRequestsListService from '../services/api/approval/View/GetRequestsLis
 import ApproveRequestService from '../services/api/approval/Manage/ApproveRequestService';
 import RejectRequestService from '../services/api/approval/Manage/RejectRequestService';
 import type { ApprovalRequestDto, RequestType, RequestStatus, ApprovalRequestFiltersDto } from '../services/api/approval/types';
+import { UserAutocomplete } from '../components/UserAutocomplete';
 
 export default function ApprovalRequests() {
   const [requests, setRequests] = useState<ApprovalRequestDto[]>([]);
@@ -37,11 +38,13 @@ export default function ApprovalRequests() {
   const [filters, setFilters] = useState<ApprovalRequestFiltersDto>({});
   const [requestTypeFilter, setRequestTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [userNameFilter, setUserNameFilter] = useState<string>("");
   const [createdFromFilter, setCreatedFromFilter] = useState<string>("");
   const [createdToFilter, setCreatedToFilter] = useState<string>("");
   
   // Стан для управління розгортанням секцій
   const [isBasicFiltersOpen, setIsBasicFiltersOpen] = useState(true);
+  const [isUserFiltersOpen, setIsUserFiltersOpen] = useState(false);
   const [isDateFiltersOpen, setIsDateFiltersOpen] = useState(false);
   
   // Стан для пагінації
@@ -189,6 +192,10 @@ export default function ApprovalRequests() {
       newFilters.status = parseInt(statusFilter) as RequestStatus;
     }
     
+    if (userNameFilter && userNameFilter.trim()) {
+      newFilters.userFullName = userNameFilter.trim();
+    }
+    
     if (createdFromFilter) {
       newFilters.createdFrom = new Date(createdFromFilter).toISOString();
     }
@@ -201,9 +208,11 @@ export default function ApprovalRequests() {
     setPage(1); // Скидаємо на першу сторінку при застосуванні фільтрів
   };
 
+
   const clearFilters = () => {
     setRequestTypeFilter("all");
     setStatusFilter("all");
+    setUserNameFilter("");
     setCreatedFromFilter("");
     setCreatedToFilter("");
     setFilters({});
@@ -380,6 +389,30 @@ export default function ApprovalRequests() {
                         value={createdToFilter}
                         onChange={(e) => setCreatedToFilter(e.target.value)}
                         className="h-9 w-full"
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Фільтри користувачів */}
+              <Collapsible open={isUserFiltersOpen} onOpenChange={setIsUserFiltersOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between h-8 text-sm">
+                    👤 Фільтри користувачів
+                    {isUserFiltersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 mt-3">
+                  <div className="space-y-3">
+                    {/* Фільтр за користувачем */}
+                    <div className="space-y-2">
+                      <Label htmlFor="user-name-filter" className="text-sm">Користувач</Label>
+                      <UserAutocomplete
+                        value={userNameFilter}
+                        onChange={setUserNameFilter}
+                        placeholder="Введіть ПІБ користувача"
+                        className="w-full"
                       />
                     </div>
                   </div>

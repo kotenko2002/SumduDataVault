@@ -8,6 +8,7 @@ export class GetRequestsListService {
       ...filters,
       // Якщо skip не вказано, залишаємо undefined (сервер встановить 0)
       // Якщо take не вказано, залишаємо undefined (сервер встановить 10)
+      // userFullName - фільтр за ПІБ користувача (повна форма)
     };
 
     const response = await apiClient.post<ApprovalRequestDto[]>('/requests/admin', requestFilters, {

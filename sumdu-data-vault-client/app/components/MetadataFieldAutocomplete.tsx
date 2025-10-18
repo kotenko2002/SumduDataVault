@@ -64,7 +64,7 @@ export function MetadataFieldAutocomplete({
     // Debounce запит на 300ms
     debounce(() => {
       fetchSuggestions(inputValue);
-    }, 300);
+    }, 800);
   };
 
   // Обробка вибору пропозиції

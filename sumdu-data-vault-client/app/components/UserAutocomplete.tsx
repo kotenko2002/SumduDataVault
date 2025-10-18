@@ -4,25 +4,23 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Input } from "~/components/ui/input";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "~/lib/utils";
-import GetMetadataValuesService from "~/services/api/metadata/GetMetadataValuesService";
+import SearchUsersService from "~/services/api/users/SearchUsersService";
 
-interface MetadataValueAutocompleteProps {
+interface UserAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
-  fieldName: string;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
 }
 
-export function MetadataValueAutocomplete({
+export function UserAutocomplete({
   value,
   onChange,
-  fieldName,
-  placeholder = "Значення",
+  placeholder = "Введіть ПІБ користувача",
   className,
   disabled = false
-}: MetadataValueAutocompleteProps) {
+}: UserAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,20 +37,19 @@ export function MetadataValueAutocomplete({
 
   // Функція для отримання пропозицій
   const fetchSuggestions = async (searchTerm: string) => {
-    if (!fieldName.trim()) {
+    if (searchTerm.length < 2) {
       setSuggestions([]);
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await GetMetadataValuesService.getMetadataValues({
-        field: fieldName,
-        value: searchTerm || null
+      const response = await SearchUsersService.searchUsers({
+        search: searchTerm
       });
-      setSuggestions(response.values);
+      setSuggestions(response.fullNames);
     } catch (error) {
-      console.error('Помилка отримання пропозицій значень:', error);
+      console.error('Помилка отримання пропозицій користувачів:', error);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
@@ -99,7 +96,7 @@ export function MetadataValueAutocomplete({
             value={searchValue}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => {
-              if (fieldName.trim()) {
+              if (searchValue.length >= 2) {
                 fetchSuggestions(searchValue);
               }
             }}
@@ -111,7 +108,7 @@ export function MetadataValueAutocomplete({
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Пошук значень..." value={searchValue} onValueChange={handleInputChange} />
+          <CommandInput placeholder="Пошук користувачів..." value={searchValue} onValueChange={handleInputChange} />
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
@@ -120,16 +117,16 @@ export function MetadataValueAutocomplete({
               </div>
             ) : suggestions.length === 0 ? (
               <CommandEmpty>
-                {!fieldName.trim()
-                  ? "Введіть назву поля для пошуку значень" 
-                  : "Пропозиції не знайдено"
+                {searchValue.length < 2 
+                  ? "Пошук від 2 символів" 
+                  : "Користувачів не знайдено"
                 }
               </CommandEmpty>
             ) : (
               <CommandGroup>
-                {suggestions.map((suggestion) => (
+                {suggestions.map((suggestion, index) => (
                   <CommandItem
-                    key={suggestion}
+                    key={`${suggestion}-${index}`}
                     value={suggestion}
                     onSelect={() => handleSelect(suggestion)}
                     className="cursor-pointer"

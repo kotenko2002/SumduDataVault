@@ -38,6 +38,7 @@
     <Folder Include="DataAccess\Migrations\" />
     <Folder Include="Dtos\Mapper\" />
     <Folder Include="Endpoints\Approval\Manage\CancelRequest\Models\" />
+    <Folder Include="Endpoints\Users\" />
   </ItemGroup>
 
 </Project>

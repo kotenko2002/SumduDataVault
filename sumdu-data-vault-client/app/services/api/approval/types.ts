@@ -31,6 +31,7 @@ export interface ApprovalRequestFiltersDto {
   status?: RequestStatus;
   createdFrom?: string; // ISO date string
   createdTo?: string; // ISO date string
+  userFullName?: string;
   skip?: number;
   take?: number;
 }

@@ -60,6 +60,14 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
                     query = query.Where(r => r.RequestedAt <= filters.CreatedTo.Value);
                 }
 
+                // Фільтр за ПІБ користувача
+                if (!string.IsNullOrEmpty(filters.UserFullName))
+                {
+                    query = query.Where(r => 
+                        (r.RequestingUser.LastName + " " + r.RequestingUser.FirstName + " " + r.RequestingUser.MiddleName)
+                        .Contains(filters.UserFullName));
+                }
+
                 var requests = await query
                     .OrderByDescending(r => r.RequestedAt)
                     .Skip(filters.Skip ?? 0)
