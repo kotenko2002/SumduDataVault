@@ -35,7 +35,6 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register
                 }
 
                 var user = mapper.Map<User>(request);
-                user.MiddleName = "temp"; // TODO: remove
 
                 var result = await userManager.CreateAsync(user, request.Password);
                 if (!result.Succeeded)

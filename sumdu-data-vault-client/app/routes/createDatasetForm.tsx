@@ -160,7 +160,7 @@ export default function CreateDatasetForm() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="description">Опис датасету *</Label>
+                  <Label htmlFor="description">Опис датасету</Label>
                   <Textarea
                     id="description"
                     placeholder="Детальний опис датасету, його призначення та зміст..."
@@ -180,17 +180,6 @@ export default function CreateDatasetForm() {
                   />
                 </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="userJustification">Обґрунтування запиту *</Label>
-                <Textarea
-                  id="userJustification"
-                  placeholder="Чому потрібно створити цей датасет або надати доступ"
-                  className="min-h-[80px]"
-                  value={formData.userJustification}
-                  onChange={(e) => handleInputChange("userJustification", e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">Мінімум 5 символів. Це поле потрібне для системи апрувів.</p>
-              </div>
               </CardContent>
             </Card>
 
@@ -205,7 +194,7 @@ export default function CreateDatasetForm() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="csv">CSV файл *</Label>
+                    <Label htmlFor="csv">CSV файл</Label>
                     <Input
                       id="csv"
                       type="file"
@@ -213,9 +202,6 @@ export default function CreateDatasetForm() {
                       onChange={handleFileChange}
                       className="cursor-pointer"
                     />
-                    <p className="text-sm text-muted-foreground">
-                      Підтримуються тільки CSV файли
-                    </p>
                   </div>
                   {formData.csv && (
                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -243,7 +229,7 @@ export default function CreateDatasetForm() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="collectedFrom">Дата початку збору *</Label>
+                  <Label htmlFor="collectedFrom">Дата початку збору</Label>
                   <Input
                     id="collectedFrom"
                     type="datetime-local"
@@ -252,7 +238,7 @@ export default function CreateDatasetForm() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="collectedTo">Дата закінчення збору *</Label>
+                  <Label htmlFor="collectedTo">Дата закінчення збору</Label>
                   <Input
                     id="collectedTo"
                     type="datetime-local"
@@ -330,6 +316,27 @@ export default function CreateDatasetForm() {
             </CardContent>
           </Card>
 
+          {/* Обґрунтування запиту */}
+          <Card>
+            <CardHeader>
+              <CardTitle>💭 Обґрунтування запиту</CardTitle>
+              <CardDescription>
+                Поясніть, чому потрібно створити цей датасет
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="userJustification">Обґрунтування запиту</Label>
+                <Textarea
+                  id="userJustification"
+                  placeholder="Чому потрібно створити цей датасет або надати доступ"
+                  className="min-h-[100px]"
+                  value={formData.userJustification}
+                  onChange={(e) => handleInputChange("userJustification", e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Кнопки */}
           <div className="flex flex-col sm:flex-row gap-4 justify-end">
