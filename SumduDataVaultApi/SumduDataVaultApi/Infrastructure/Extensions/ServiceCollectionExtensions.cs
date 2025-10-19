@@ -40,12 +40,14 @@ namespace SumduDataVaultApi.Infrastructure.Extensions
         {
             var connString = configuration.GetConnectionString("Postgres");
 
+            // Створюємо NpgsqlDataSource з підтримкою Newtonsoft.Json
             var dataSourceBuilder = new NpgsqlDataSourceBuilder(connString);
             dataSourceBuilder.UseJsonNet();
+            var dataSource = dataSourceBuilder.Build();
 
             services.AddDbContext<AppDbContext>(options => 
             {
-                options.UseNpgsql(dataSourceBuilder.Build());
+                options.UseNpgsql(dataSource);
                 options.ConfigureWarnings(warnings => 
                 {
                     warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning);

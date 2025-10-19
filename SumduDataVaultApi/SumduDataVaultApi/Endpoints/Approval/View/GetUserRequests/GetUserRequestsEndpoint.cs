@@ -42,7 +42,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetUserRequests
                     .OrderByDescending(r => r.RequestedAt)
                     .ToListAsync();
                 
-                var response = mapper.Map<List<ApprovalRequestDto>>(requests);
+                var response = requests.Select(r => mapper.Map<ApprovalRequestDto>((r, true))).ToList();
 
                 return Results.Ok(response);
             }

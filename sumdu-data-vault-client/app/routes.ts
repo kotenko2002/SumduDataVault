@@ -8,5 +8,6 @@ export default [
   route("register", "routes/register.tsx"),
   route("dataset/:id", "routes/dataset.$id.tsx"),
   route("approval-requests", "routes/approval-requests.tsx"),
+  route("approval-request/:id", "routes/approval-request.$id.tsx"),
   route("user-request-history", "routes/user-request-history.tsx")
 ] satisfies RouteConfig;

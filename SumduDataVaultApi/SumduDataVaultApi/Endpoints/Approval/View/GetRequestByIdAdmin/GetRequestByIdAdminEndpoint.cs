@@ -1,25 +1,27 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SumduDataVaultApi.DataAccess;
+using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Infrastructure.Extensions;
 using MapsterMapper;
 
-namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestById
+namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
 {
-    public class GetRequestByIdEndpoint : IEndpoint
+    public class GetRequestByIdAdminEndpoint : IEndpoint
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            app.MapGet("requests/{id:long}", Handler)
+            app.MapGet("requests/admin/{id:long}", Handler)
                .WithTags("Approval Requests - View")
-               .WithSummary("Отримати детальну інформацію про запит")
-               .WithDescription("Повертає детальну інформацію про конкретний запит. Користувачі можуть переглядати тільки свої запити, адміністратори - всі")
+               .WithSummary("Отримати детальну інформацію про запит (для адміністраторів)")
+               .WithDescription("Повертає детальну інформацію про конкретний запит. Доступно тільки для адміністраторів")
                .Produces<ApprovalRequestDto>()
                .Produces(StatusCodes.Status404NotFound)
                .Produces(StatusCodes.Status401Unauthorized)
                .Produces(StatusCodes.Status403Forbidden)
-               .RequireAuthorization();
+               .RequireAuthorization(new AuthorizeAttribute { Roles = Roles.Admin });
         }
 
         public static async Task<IResult> Handler(
@@ -27,7 +29,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestById
             AppDbContext context,
             HttpContext httpContext,
             IMapper mapper,
-            ILogger<GetRequestByIdEndpoint> logger)
+            ILogger<GetRequestByIdAdminEndpoint> logger)
         {
             try
             {
@@ -36,7 +38,6 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestById
                 {
                     return Results.Unauthorized();
                 }
-                var userId = userIdResult.Value;
 
                 var request = await context.ApprovalRequest
                     .Include(r => r.RequestingUser)
@@ -51,18 +52,13 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestById
                     return Results.NotFound();
                 }
 
-                if (!request.IsOwner(userId))
-                {
-                    return Results.Forbid();
-                }
-
                 var response = mapper.Map<ApprovalRequestDto>((request, false));
 
                 return Results.Ok(response);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Помилка при отриманні запиту {RequestId}", id);
+                logger.LogError(ex, "Помилка при отриманні запиту {RequestId} адміністратором", id);
                 return Results.Problem("Сталася помилка при отриманні запиту");
             }
         }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/search";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -27,6 +28,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Search() {
+  const navigate = useNavigate();
   const [isBasicFiltersOpen, setIsBasicFiltersOpen] = useState(true);
   const [isDateFiltersOpen, setIsDateFiltersOpen] = useState(false);
   const [isSizeFiltersOpen, setIsSizeFiltersOpen] = useState(false);
@@ -508,7 +510,7 @@ export default function Search() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => window.location.href = `/dataset/${dataset.id}`}
+                              onClick={() => navigate(`/dataset/${dataset.id}`)}
                               className="h-8"
                             >
                               Деталі

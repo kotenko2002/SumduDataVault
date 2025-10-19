@@ -74,7 +74,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
                     .Take(filters.Take ?? 10)
                     .ToListAsync();
                 
-                var response = mapper.Map<List<ApprovalRequestDto>>(requests);
+                var response = requests.Select(r => mapper.Map<ApprovalRequestDto>((r, true))).ToList();
 
                 return Results.Ok(response);
             }
