@@ -112,7 +112,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
               className="mb-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Назад до пошуку
+              Назад
             </Button>
             <div className="space-y-4">
               <Skeleton className="h-8 w-64" />
@@ -158,7 +158,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
               className="mb-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Назад до пошуку
+              Назад
             </Button>
           </div>
           <Card>
@@ -185,7 +185,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Назад до пошуку
+            Назад
           </Button>
           <div className="flex items-center justify-between">
             <div>
