@@ -18,7 +18,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { setIsAuthorized } = useAuth();
+  const { updateAuthFromToken } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,7 +29,7 @@ export default function Login() {
     try {
       const token = await LoginService.login({ email, password });
       localStorage.setItem("accessToken", token);
-      setIsAuthorized(true);
+      updateAuthFromToken();
       toast.success("Вхід виконано успішно");
       navigate("/", { replace: true });
     } catch (err) {

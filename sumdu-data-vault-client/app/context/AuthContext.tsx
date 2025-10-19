@@ -11,6 +11,7 @@ interface AuthContextType {
   setIsAuthorized: React.Dispatch<React.SetStateAction<boolean>>;
   userRole: string | null;
   setUserRole: React.Dispatch<React.SetStateAction<string | null>>;
+  updateAuthFromToken: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,34 +24,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  useEffect(() => {
-    const checkToken = () => {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        try {
-          const parsedToken = JSON.parse(atob(token.split(".")[1]));
-          const role =
-            parsedToken[
-              "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-            ];
-          console.log("role", role);
+  const checkToken = () => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const parsedToken = JSON.parse(atob(token.split(".")[1]));
+        const role =
+          parsedToken[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+          ];
+        console.log("role", role);
 
-          setIsAuthorized(true);
-          if (!!role) {
-            console.log("role in if", role);
-            setUserRole(role);
-          }
-        } catch (error) {
-          console.error("Error parsing token:", error);
-          setIsAuthorized(false);
-          setUserRole(null);
+        setIsAuthorized(true);
+        if (!!role) {
+          console.log("role in if", role);
+          setUserRole(role);
         }
-      } else {
+      } catch (error) {
+        console.error("Error parsing token:", error);
         setIsAuthorized(false);
         setUserRole(null);
       }
-    };
+    } else {
+      setIsAuthorized(false);
+      setUserRole(null);
+    }
+  };
 
+  const updateAuthFromToken = () => {
+    checkToken();
+  };
+
+  useEffect(() => {
     checkToken();
 
     window.addEventListener("storage", checkToken);
@@ -59,7 +64,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthorized, setIsAuthorized, userRole, setUserRole }}
+      value={{ isAuthorized, setIsAuthorized, userRole, setUserRole, updateAuthFromToken }}
     >
       {children}
     </AuthContext.Provider>
