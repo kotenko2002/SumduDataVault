@@ -65,7 +65,7 @@ const navigationItemsUnauthorized: NavigationItem[] = [
 export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthorized, setIsAuthorized } = useAuth();
+  const { isAuthorized, logout } = useAuth();
   const navigationItems = isAuthorized ? navigationItemsAuthorized : navigationItemsUnauthorized;
 
   return (
@@ -130,10 +130,7 @@ export function Navigation() {
                   <NavigationMenuLink asChild>
                     <Link
                       to="/login"
-                      onClick={() => {
-                        try { localStorage.removeItem("accessToken"); } catch {}
-                        setIsAuthorized(false);
-                      }}
+                      onClick={logout}
                       className={cn(
                         "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
                       )}

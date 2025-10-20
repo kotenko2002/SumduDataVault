@@ -48,6 +48,21 @@ apiClient.interceptors.response.use(
     if (error.response) {
       // Сервер відповів з кодом помилки
       const status = error.response.status;
+      
+      // Обробляємо 401 Unauthorized - токен прострочений або недійсний
+      if (status === 401) {
+        console.log('Received 401, logging out user');
+        // Видаляємо токен
+        try {
+          localStorage.removeItem('accessToken');
+          // Відправляємо кастомну подію для оновлення AuthContext
+          window.dispatchEvent(new CustomEvent('tokenRemoved'));
+        } catch (_) {
+          // ігноруємо помилки доступу до localStorage
+        }
+        throw new Error('Сесія закінчилася. Будь ласка, увійдіть знову.');
+      }
+      
       const message = error.response.data?.message || `Помилка сервера: ${status}`;
       throw new Error(message);
     } else if (error.request) {
