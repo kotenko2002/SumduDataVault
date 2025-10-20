@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "~/components/ui/pagination";
-import { Filter, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { Filter, ChevronDown, ChevronUp } from "lucide-react";
 import GetRequestsListService from '../services/api/approval/View/GetRequestsListService';
 import type { ApprovalRequestDto, RequestType, RequestStatus, ApprovalRequestFiltersDto } from '../services/api/approval/types';
 import { UserAutocomplete } from '../components/UserAutocomplete';
+import { RequestsTable } from '../components/RequestsTable';
 
 export default function ApprovalRequests() {
-  const navigate = useNavigate();
   const [requests, setRequests] = useState<ApprovalRequestDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -36,82 +33,6 @@ export default function ApprovalRequests() {
   const [pageSize] = useState(10); // Фіксований розмір сторінки
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-
-  const getRequestTypeLabel = (requestType: RequestType): string => {
-    switch (requestType) {
-      case 0:
-        return 'Повний доступ до даних';
-      case 1:
-        return 'Завантаження нового датасету';
-      default:
-        return 'Невідомий тип';
-    }
-  };
-
-  const getRequestTypeColors = (requestType: RequestType): { bg: string; text: string } => {
-    switch (requestType) {
-      case 0: // Повний доступ до даних
-        return {
-          bg: 'bg-blue-100',
-          text: 'text-blue-800'
-        };
-      case 1: // Завантаження нового датасету
-        return {
-          bg: 'bg-green-100',
-          text: 'text-green-800'
-        };
-      default:
-        return {
-          bg: 'bg-gray-100',
-          text: 'text-gray-800'
-        };
-    }
-  };
-
-  const getRequestStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'Pending':
-        return 'Очікує розгляду';
-      case 'Approved':
-        return 'Схвалено';
-      case 'Rejected':
-        return 'Відхилено';
-      case 'Canceled':
-        return 'Скасовано';
-      default:
-        return status;
-    }
-  };
-
-  const getRequestStatusColors = (status: string): { bg: string; text: string } => {
-    switch (status) {
-      case 'Pending':
-        return {
-          bg: 'bg-yellow-100',
-          text: 'text-yellow-800'
-        };
-      case 'Approved':
-        return {
-          bg: 'bg-green-100',
-          text: 'text-green-800'
-        };
-      case 'Rejected':
-        return {
-          bg: 'bg-red-100',
-          text: 'text-red-800'
-        };
-      case 'Canceled':
-        return {
-          bg: 'bg-gray-100',
-          text: 'text-gray-800'
-        };
-      default:
-        return {
-          bg: 'bg-gray-100',
-          text: 'text-gray-800'
-        };
-    }
-  };
 
 
   const applyFilters = () => {
@@ -187,37 +108,9 @@ export default function ApprovalRequests() {
     }
   };
 
-  // Функції навігації по сторінках
-  const goToPrev = () => {
-    if (page > 1) {
-      fetchRequests(page - 1);
-    }
-  };
-
-  const goToNext = () => {
-    if (page < totalPages) {
-      fetchRequests(page + 1);
-    }
-  };
-
-  const goToPage = (pageNumber: number) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages && pageNumber !== page) {
-      fetchRequests(pageNumber);
-    }
-  };
-
-  // Формування простого списку сторінок (1 .. totalPages) з обрізанням
-  const renderPageNumbers = () => {
-    const pages: number[] = [];
-    const maxButtons = 5;
-    if (totalPages <= maxButtons) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      const start = Math.max(1, page - 2);
-      const end = Math.min(totalPages, start + maxButtons - 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-    }
-    return pages;
+  // Обробник зміни сторінки
+  const handlePageChange = (newPage: number) => {
+    fetchRequests(newPage);
   };
 
   useEffect(() => {
@@ -367,111 +260,25 @@ export default function ApprovalRequests() {
 
         {/* Основна область з результатами - справа на великих екранах */}
         <div className="flex-1 min-w-0">
-          {/* Результати */}
-          {isLoading ? (
-            <div className="bg-card border rounded-lg p-6">
-              <p className="text-muted-foreground">Завантаження запитів...</p>
-            </div>
-          ) : requests.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Список запитів</CardTitle>
-                <CardDescription>
-                  Сторінка {page} з {totalPages} • Показано {requests.length} з {totalCount} запитів
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Тип запиту</TableHead>
-                        <TableHead>Статус</TableHead>
-                        <TableHead>Користувач</TableHead>
-                        <TableHead>Дата запиту</TableHead>
-                        <TableHead className="w-[100px]">Дії</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {requests.map((request) => (
-                        <TableRow key={request.id} className="hover:bg-muted/50">
-                          <TableCell className="font-mono text-sm">
-                            {request.id}
-                          </TableCell>
-                          <TableCell className="max-w-[120px] text-center">
-                            <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium whitespace-normal break-words line-clamp-2 ${getRequestTypeColors(request.requestType).bg} ${getRequestTypeColors(request.requestType).text}`}>
-                              {getRequestTypeLabel(request.requestType)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRequestStatusColors(request.status).bg} ${getRequestStatusColors(request.status).text}`}>
-                              {getRequestStatusLabel(request.status)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {request.requestingUserName}
-                          </TableCell>
-                          <TableCell className="max-w-[120px]">
-                            <div className="text-sm whitespace-normal break-words line-clamp-2">
-                              {new Date(request.requestedAt).toLocaleDateString('uk-UA', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => {
-                                navigate(`/approval-request/${request.id}`);
-                              }}
-                              className="h-8"
-                            >
-                              Деталі
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Пагінація */}
-                {totalPages > 1 && (
-                  <div className="mt-4">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious onClick={goToPrev} className={page === 1 ? 'pointer-events-none opacity-50' : ''} />
-                        </PaginationItem>
-                        {renderPageNumbers().map((p) => (
-                          <PaginationItem key={p}>
-                            <PaginationLink isActive={p === page} onClick={() => goToPage(p)}>
-                              {p}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                          <PaginationNext onClick={goToNext} className={page === totalPages ? 'pointer-events-none opacity-50' : ''} />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="bg-card border rounded-lg p-6">
-              <p className="text-muted-foreground">
-                Немає запитів, що відповідають обраним фільтрам.
-              </p>
-            </div>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Список запитів</CardTitle>
+              <CardDescription>
+                Сторінка {page} з {totalPages} • Показано {requests.length} з {totalCount} запитів
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RequestsTable
+                requests={requests}
+                page={page}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                isLoading={isLoading}
+                showUserColumn={true}
+                onPageChange={handlePageChange}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 

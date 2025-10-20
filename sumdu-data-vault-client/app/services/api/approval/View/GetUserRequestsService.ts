@@ -1,9 +1,9 @@
 import apiClient from '../../apiClient';
-import type {ApprovalRequestDto} from '../types';
+import type {ApprovalRequestDto, UserRequestFiltersDto} from '../types';
 
 export class GetUserRequestsService {
-  static async getUserRequests(): Promise<ApprovalRequestDto[]> {
-    const response = await apiClient.get<ApprovalRequestDto[]>('/requests', {
+  static async getUserRequests(filters?: UserRequestFiltersDto): Promise<ApprovalRequestDto[]> {
+    const response = await apiClient.post<ApprovalRequestDto[]>('/requests/user', filters || {}, {
       headers: {
         'Content-Type': 'application/json',
       },

@@ -1,14 +1,13 @@
 using SumduDataVaultApi.DataAccess.Enums;
 
-namespace SumduDataVaultApi.Dtos
+namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList.Models
 {
-    public class ApprovalRequestFiltersDto
+    public class UserRequestFiltersRequest
     {
         public RequestType? RequestType { get; set; }
         public RequestStatus? Status { get; set; }
         public DateTime? CreatedFrom { get; set; }
         public DateTime? CreatedTo { get; set; }
-        public string? UserFullName { get; set; }
         public int? Skip { get; set; }
         public int? Take { get; set; }
     }

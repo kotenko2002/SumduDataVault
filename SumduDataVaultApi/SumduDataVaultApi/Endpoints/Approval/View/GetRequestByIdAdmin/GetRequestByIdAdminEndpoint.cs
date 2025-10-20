@@ -13,7 +13,9 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
         {
-            app.MapGet("requests/admin/{id:long}", Handler)
+            // Адміністраторський ендпоінт - доступ до всіх запитів
+            app.MapGet("requests/admin/{id:long}", (long id, AppDbContext context, HttpContext httpContext, IMapper mapper, ILogger<GetRequestByIdAdminEndpoint> logger) => 
+                Handler(id, context, httpContext, mapper, logger, isUserFiltered: false))
                .WithTags("Approval Requests - View")
                .WithSummary("Отримати детальну інформацію про запит (для адміністраторів)")
                .WithDescription("Повертає детальну інформацію про конкретний запит. Доступно тільки для адміністраторів")
@@ -22,14 +24,27 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
                .Produces(StatusCodes.Status401Unauthorized)
                .Produces(StatusCodes.Status403Forbidden)
                .RequireAuthorization(new AuthorizeAttribute { Roles = Roles.Admin });
+
+            // Користувацький ендпоінт - доступ тільки до власних запитів
+            app.MapGet("requests/{id:long}", (long id, AppDbContext context, HttpContext httpContext, IMapper mapper, ILogger<GetRequestByIdAdminEndpoint> logger) => 
+                Handler(id, context, httpContext, mapper, logger, isUserFiltered: true))
+               .WithTags("Approval Requests - View")
+               .WithSummary("Отримати детальну інформацію про запит")
+               .WithDescription("Повертає детальну інформацію про конкретний запит. Користувачі можуть переглядати тільки свої запити, адміністратори - всі")
+               .Produces<ApprovalRequestDto>()
+               .Produces(StatusCodes.Status404NotFound)
+               .Produces(StatusCodes.Status401Unauthorized)
+               .Produces(StatusCodes.Status403Forbidden)
+               .RequireAuthorization();
         }
 
         public static async Task<IResult> Handler(
-            [FromRoute] long id,
+            long id,
             AppDbContext context,
             HttpContext httpContext,
             IMapper mapper,
-            ILogger<GetRequestByIdAdminEndpoint> logger)
+            ILogger<GetRequestByIdAdminEndpoint> logger,
+            bool isUserFiltered)
         {
             try
             {
@@ -52,13 +67,26 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
                     return Results.NotFound();
                 }
 
+                // Перевірка доступу для користувацьких запитів
+                if (isUserFiltered)
+                {
+                    var userId = userIdResult.Value;
+                    if (!request.IsOwner(userId))
+                    {
+                        return Results.Forbid();
+                    }
+                }
+
                 var response = mapper.Map<ApprovalRequestDto>((request, false));
 
                 return Results.Ok(response);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Помилка при отриманні запиту {RequestId} адміністратором", id);
+                var logMessage = isUserFiltered 
+                    ? "Помилка при отриманні запиту {RequestId}" 
+                    : "Помилка при отриманні запиту {RequestId} адміністратором";
+                logger.LogError(ex, logMessage, id);
                 return Results.Problem("Сталася помилка при отриманні запиту");
             }
         }

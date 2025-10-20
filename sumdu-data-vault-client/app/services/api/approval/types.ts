@@ -35,3 +35,12 @@ export interface ApprovalRequestFiltersDto {
   skip?: number;
   take?: number;
 }
+
+export interface UserRequestFiltersDto {
+  requestType?: RequestType;
+  status?: RequestStatus;
+  createdFrom?: string; // ISO date string
+  createdTo?: string; // ISO date string
+  skip?: number;
+  take?: number;
+}

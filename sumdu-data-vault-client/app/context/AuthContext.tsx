@@ -36,6 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         setIsAuthorized(true);
         setUserRole(role || null);
+        console.log('role', role);
       } catch (error) {
         console.error("Error parsing token:", error);
         setIsAuthorized(false);

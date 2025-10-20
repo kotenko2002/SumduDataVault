@@ -6,14 +6,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { ArrowLeft, User, Calendar, FileText, CheckCircle, XCircle, Clock, AlertCircle, Check, X } from "lucide-react";
-import GetRequestByIdAdminService from '~/services/api/approval/View/GetRequestByIdAdminService';
+import GetRequestByIdService from '~/services/api/approval/View/GetRequestByIdService';
 import ApproveRequestService from '~/services/api/approval/Manage/ApproveRequestService';
 import RejectRequestService from '~/services/api/approval/Manage/RejectRequestService';
+import CancelRequestService from '~/services/api/approval/Manage/CancelRequestService';
+import { useAuth } from '~/context/AuthContext';
 import type { ApprovalRequestDto } from '~/services/api/approval/types';
 
 export default function ApprovalRequestDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   const [request, setRequest] = useState<ApprovalRequestDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +24,7 @@ export default function ApprovalRequestDetails() {
   // Стан для модальних вікон та обробки запитів
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [adminComments, setAdminComments] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -105,6 +109,11 @@ export default function ApprovalRequestDetails() {
     setIsRejectDialogOpen(true);
   };
 
+  const openCancelDialog = () => {
+    setAdminComments("");
+    setIsCancelDialogOpen(true);
+  };
+
   const handleApprove = async () => {
     if (!id || !adminComments.trim()) return;
     
@@ -143,6 +152,25 @@ export default function ApprovalRequestDetails() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!id) return;
+    
+    setIsProcessing(true);
+    try {
+      await CancelRequestService.cancelRequest(parseInt(id));
+      console.log('Request canceled successfully:', id);
+      // Оновлюємо дані запиту після успішного скасування
+      await fetchRequest();
+      setIsCancelDialogOpen(false);
+      setAdminComments("");
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+      alert('Помилка при скасуванні запиту. Спробуйте ще раз.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const fetchRequest = async () => {
     if (!id) {
       setError('ID запиту не вказано');
@@ -150,9 +178,23 @@ export default function ApprovalRequestDetails() {
       return;
     }
 
+    // Якщо роль ще не завантажена, чекаємо
+    if (userRole === null) {
+      console.log('UserRole is null, waiting for auth to load...');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const requestData = await GetRequestByIdAdminService.getRequestById(parseInt(id));
+      // Логування для діагностики
+      console.log('Current userRole:', userRole);
+      console.log('userRole type:', typeof userRole);
+      console.log('userRole === "Admin":', userRole === 'Admin');
+      
+      // Вибираємо ендпоінт залежно від ролі користувача
+      const requestData = userRole === 'Admin' 
+        ? await GetRequestByIdService.getRequestByIdAdmin(parseInt(id))
+        : await GetRequestByIdService.getRequestById(parseInt(id));
       setRequest(requestData);
     } catch (error) {
       console.error('Помилка при завантаженні запиту:', error);
@@ -164,14 +206,16 @@ export default function ApprovalRequestDetails() {
 
   useEffect(() => {
     fetchRequest();
-  }, [id]);
+  }, [id, userRole]);
 
-  if (isLoading) {
+  if (isLoading || userRole === null) {
     return (
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-card border rounded-lg p-6">
-            <p className="text-muted-foreground">Завантаження деталей запиту...</p>
+            <p className="text-muted-foreground">
+              {userRole === null ? 'Завантаження авторизації...' : 'Завантаження деталей запиту...'}
+            </p>
           </div>
         </div>
       </main>
@@ -326,21 +370,36 @@ export default function ApprovalRequestDetails() {
         {/* Кнопки дій для запитів в статусі "Pending" */}
         {request.status === 'Pending' && (
           <div className="flex justify-end gap-4">
-            <Button 
-              variant="destructive"
-              className="flex items-center gap-2"
-              onClick={openRejectDialog}
-            >
-              <X className="h-4 w-4" />
-              Відхилити
-            </Button>
-            <Button 
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-              onClick={openApproveDialog}
-            >
-              <Check className="h-4 w-4" />
-              Схвалити
-            </Button>
+            {userRole === 'Admin' ? (
+              // Кнопки для адміністраторів
+              <>
+                <Button 
+                  variant="destructive"
+                  className="flex items-center gap-2"
+                  onClick={openRejectDialog}
+                >
+                  <X className="h-4 w-4" />
+                  Відхилити
+                </Button>
+                <Button 
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                  onClick={openApproveDialog}
+                >
+                  <Check className="h-4 w-4" />
+                  Схвалити
+                </Button>
+              </>
+            ) : (
+              // Кнопка для звичайних користувачів
+              <Button 
+                variant="destructive"
+                className="flex items-center gap-2"
+                onClick={openCancelDialog}
+              >
+                <X className="h-4 w-4" />
+                Скасувати
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -415,6 +474,35 @@ export default function ApprovalRequestDetails() {
             >
               <X className="h-4 w-4" />
               {isProcessing ? 'Відхилення...' : 'Відхилити'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Модальне вікно для скасування */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Скасувати запит</DialogTitle>
+            <DialogDescription>
+              Ви впевнені, що хочете скасувати цей запит? Ця дія незворотна.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCancelDialogOpen(false)}
+              disabled={isProcessing}
+            >
+              Скасувати
+            </Button>
+            <Button
+              onClick={handleCancel}
+              disabled={isProcessing}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
+            >
+              <X className="h-4 w-4" />
+              {isProcessing ? 'Скасування...' : 'Скасувати запит'}
             </Button>
           </DialogFooter>
         </DialogContent>
