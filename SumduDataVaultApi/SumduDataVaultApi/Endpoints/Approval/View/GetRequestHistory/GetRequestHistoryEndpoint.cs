@@ -1,3 +1,4 @@
+using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SumduDataVaultApi.DataAccess;
@@ -15,6 +16,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestHistory
         public string ActionedByUserName { get; set; } = string.Empty;
     }
 
+
     public class GetRequestHistoryEndpoint : IEndpoint
     {
         public void MapEndpoint(IEndpointRouteBuilder app)
@@ -30,55 +32,60 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestHistory
                .RequireAuthorization();
         }
 
-        public static async Task<IResult> Handler(
+        public static async Task<IActionResult> Handler(
             [FromRoute] long id,
             AppDbContext context,
             HttpContext httpContext,
             ILogger<GetRequestHistoryEndpoint> logger)
         {
-            try
+            var result = await InnerHandler(id, context, httpContext);
+
+            return result.Match(
+                requestsList => new OkObjectResult(requestsList),
+                ErrorHandler.Problem
+            );
+        }
+
+        private static async Task<ErrorOr<List<RequestHistoryDto>>> InnerHandler(
+            long id,
+            AppDbContext context,
+            HttpContext httpContext)
+        {
+            var userIdResult = httpContext.User.GetUserId();
+            if (userIdResult.IsError)
             {
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-                var userId = userIdResult.Value;
-
-                var request = await context.ApprovalRequest.FindAsync(id);
-                if (request == null)
-                {
-                    return Results.NotFound();
-                }
-
-                if (!request.IsOwner(userId))
-                {
-                    return Results.Forbid();
-                }
-
-                var history = await context.RequestHistory
-                    .Include(h => h.ActionedByUser)
-                    .Where(h => h.ApprovalRequestId == id)
-                    .OrderBy(h => h.Timestamp)
-                    .ToListAsync();
-
-                var response = history.Select(h => new RequestHistoryDto
-                {
-                    Id = h.Id,
-                    FromState = h.FromState.ToString(),
-                    ToState = h.ToState.ToString(),
-                    Comments = h.Comments,
-                    Timestamp = h.Timestamp,
-                    ActionedByUserName = $"{h.ActionedByUser.FirstName} {h.ActionedByUser.LastName}"
-                }).ToList();
-
-                return Results.Ok(response);
+                return Error.Unauthorized(description: "todo: add description");
             }
-            catch (Exception ex)
+            var userId = userIdResult.Value;
+
+            var request = await context.ApprovalRequest.FindAsync(id);
+            if (request == null)
             {
-                logger.LogError(ex, "Помилка при отриманні історії запиту {RequestId}", id);
-                return Results.Problem("Сталася помилка при отриманні історії запиту");
+                return Error.NotFound(description: "todo: add description");
             }
+
+            if (!request.IsOwner(userId))
+            {
+                return Error.Forbidden(description: "todo: add description");
+            }
+
+            var history = await context.RequestHistory
+                .Include(h => h.ActionedByUser)
+                .Where(h => h.ApprovalRequestId == id)
+                .OrderBy(h => h.Timestamp)
+                .ToListAsync();
+
+            var response = history.Select(h => new RequestHistoryDto
+            {
+                Id = h.Id,
+                FromState = h.FromState.ToString(),
+                ToState = h.ToState.ToString(),
+                Comments = h.Comments,
+                Timestamp = h.Timestamp,
+                ActionedByUserName = $"{h.ActionedByUser.FirstName} {h.ActionedByUser.LastName}"
+            }).ToList();
+
+            return response;
         }
     }
 }
