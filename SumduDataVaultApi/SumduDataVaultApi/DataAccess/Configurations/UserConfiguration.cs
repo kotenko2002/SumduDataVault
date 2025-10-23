@@ -10,6 +10,7 @@ namespace SumduDataVaultApi.DataAccess.Configurations
         {
             builder.Property(u => u.FirstName).IsRequired();
             builder.Property(u => u.LastName).IsRequired();
+            builder.Property(u => u.MiddleName).IsRequired();
         }
     }
 }

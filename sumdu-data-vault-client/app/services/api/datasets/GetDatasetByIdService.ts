@@ -1,5 +1,12 @@
 import apiClient from '../apiClient';
 
+export enum AccessStatus {
+  NotAvailable = 0,
+  NotRequested = 1,
+  Requested = 2,
+  Approved = 3
+}
+
 export interface DatasetMetadataDto {
   id: number;
   field: string;
@@ -20,6 +27,7 @@ export interface GetDatasetByIdResponse {
   metadataItems: DatasetMetadataDto[];
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
+  accessStatus: AccessStatus;
 }
 
 export class GetDatasetByIdService {

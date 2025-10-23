@@ -5,12 +5,15 @@ import React, {
   useContext,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router";
 
 interface AuthContextType {
   isAuthorized: boolean;
   setIsAuthorized: React.Dispatch<React.SetStateAction<boolean>>;
   userRole: string | null;
   setUserRole: React.Dispatch<React.SetStateAction<string | null>>;
+  updateAuthFromToken: () => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,44 +25,60 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const checkToken = () => {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        try {
-          const parsedToken = JSON.parse(atob(token.split(".")[1]));
-          const role =
-            parsedToken[
-              "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-            ];
-          console.log("role", role);
-
-          setIsAuthorized(true);
-          if (!!role) {
-            console.log("role in if", role);
-            setUserRole(role);
-          }
-        } catch (error) {
-          console.error("Error parsing token:", error);
-          setIsAuthorized(false);
-          setUserRole(null);
-        }
-      } else {
+  const checkToken = () => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const parsedToken = JSON.parse(atob(token.split(".")[1]));
+        const role = parsedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        
+        setIsAuthorized(true);
+        setUserRole(role || null);
+        console.log('role', role);
+      } catch (error) {
+        console.error("Error parsing token:", error);
         setIsAuthorized(false);
         setUserRole(null);
       }
-    };
+    } else {
+      setIsAuthorized(false);
+      setUserRole(null);
+    }
+  };
 
+  const updateAuthFromToken = checkToken;
+
+  const logout = () => {
+    try {
+      localStorage.removeItem("accessToken");
+    } catch (error) {
+      console.error("Error removing access token:", error);
+    }
+    setIsAuthorized(false);
+    setUserRole(null);
+  };
+
+  useEffect(() => {
     checkToken();
 
-    window.addEventListener("storage", checkToken);
-    return () => window.removeEventListener("storage", checkToken);
+    const handleTokenRemoved = () => {
+        setIsAuthorized(false);
+        setUserRole(null);
+        navigate('/login', { replace: true });
+    };
+
+    window.addEventListener("tokenRemoved", handleTokenRemoved);
+    
+    return () => {
+      window.removeEventListener("tokenRemoved", handleTokenRemoved);
+    };
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ isAuthorized, setIsAuthorized, userRole, setUserRole }}
+      value={{ isAuthorized, setIsAuthorized, userRole, setUserRole, updateAuthFromToken, logout }}
     >
       {children}
     </AuthContext.Provider>
@@ -73,5 +92,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-

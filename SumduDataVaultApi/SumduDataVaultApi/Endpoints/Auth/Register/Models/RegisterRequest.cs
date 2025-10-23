@@ -19,5 +19,9 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register.Models
         [Required(ErrorMessage = "Last name is required")]
         [StringLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
         public string LastName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Middle name is required")]
+        [StringLength(50, ErrorMessage = "Middle name cannot exceed 50 characters")]
+        public string MiddleName { get; set; } = string.Empty;
     }
 }

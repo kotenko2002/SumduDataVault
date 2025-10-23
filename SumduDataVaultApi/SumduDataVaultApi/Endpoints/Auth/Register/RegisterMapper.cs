@@ -13,6 +13,7 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register
                 .Map(dest => dest.UserName, src => src.Email)
                 .Map(dest => dest.FirstName, src => src.FirstName)
                 .Map(dest => dest.LastName, src => src.LastName)
+                .Map(dest => dest.MiddleName, src => src.MiddleName)
                 .Map(dest => dest.SecurityStamp, src => Guid.NewGuid().ToString());
         }
     }

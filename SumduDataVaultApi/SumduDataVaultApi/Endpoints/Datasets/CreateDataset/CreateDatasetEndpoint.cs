@@ -1,20 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+﻿using ErrorOr;
+using MapsterMapper;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using OpenSearch.Client;
-using OpenSearch.Net;
 using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
+using SumduDataVaultApi.DataAccess.Enums;
+using SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models;
+using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Services.Approvals;
 using System.Security.Cryptography;
 using System.Text;
-using MapsterMapper;
-using SumduDataVaultApi.Dtos;
-using SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models;
-using ErrorOr;
 using Error = ErrorOr.Error;
-using Result = ErrorOr.Result;
-using SumduDataVaultApi.Infrastructure.Configs;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
 {
@@ -32,14 +29,22 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
         public static async Task<IResult> Handler(
             [FromForm] CreateDatasetRequest request,
             AppDbContext context,
-            IOpenSearchClient openSearch,
-            IOptions<OpenSearchConfig> openSearchConfig,
+            IApprovalService approvalService,
+            HttpContext httpContext,
             ILogger<CreateDatasetEndpoint> logger,
             IMapper mapper
         )
         {
             try
             {
+                // Отримуємо ID користувача
+                var userIdResult = httpContext.User.GetUserId();
+                if (userIdResult.IsError)
+                {
+                    return Results.Unauthorized();
+                }
+                var userId = userIdResult.Value;
+
                 var csvResult = await ProcessCsvFile(request.Csv);
                 if (csvResult.IsError)
                 {
@@ -62,18 +67,20 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
                 context.DatasetMetadata.AddRange(metadataItems);
                 await context.SaveChangesAsync();
 
-                var indexingResult = await IndexDatasetInOpenSearch(dataset, openSearch, openSearchConfig.Value, mapper, logger);
-                if (indexingResult.IsError)
-                {
-                    return Results.Problem("Dataset saved, but indexing into OpenSearch failed.", statusCode: StatusCodes.Status502BadGateway);
-                }
+                // Створюємо запит на завантаження датасету
+                var approvalRequest = await approvalService.CreateRequestAsync(
+                    userId, 
+                    RequestType.NewDatasetUpload, 
+                    request.UserJustification,
+                    dataset.Id);
 
-                return Results.Created($"/datasets/{dataset.Id}", new CreateDatasetResponse(dataset.Id));
+
+                return Results.Created($"/datasets/{dataset.Id}", new CreateDatasetResponse(dataset.Id, approvalRequest.Id));
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                logger.LogError(e, "Помилка при створенні датасету");
+                return Results.Problem("Сталася помилка при створенні датасету");
             }
         }
 
@@ -140,40 +147,5 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             return metadataItems;
         }
 
-        private static async Task<ErrorOr<Success>> IndexDatasetInOpenSearch(
-            Dataset dataset,
-            IOpenSearchClient openSearch,
-            OpenSearchConfig config,
-            IMapper mapper,
-            ILogger<CreateDatasetEndpoint> logger)
-        {
-            try
-            {
-                var indexDoc = mapper.Map<DatasetIndexDoc>(dataset);
-                var json = JsonConvert.SerializeObject(indexDoc, Formatting.Indented);
-
-                var idxResp = await openSearch.LowLevel.IndexAsync<StringResponse>(
-                    config.DefaultIndex,
-                    Guid.NewGuid().ToString(),
-                    PostData.String(json)
-                );
-
-                if (!idxResp.Success)
-                {
-                    logger.LogError("Failed to index dataset {Id} into OpenSearch. Status: {StatusCode}, Body: {Body}", 
-                        dataset.Id, idxResp.HttpStatusCode, idxResp.Body);
-
-                    return Error.Failure("OpenSearch.IndexingFailed", 
-                        $"Failed to index dataset {dataset.Id} into OpenSearch");
-                }
-
-                return Result.Success;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Exception occurred while indexing dataset {Id}", dataset.Id);
-                return Error.Failure("OpenSearch.Exception", $"Exception occurred while indexing: {ex.Message}");
-            }
-        }
     }
 }

@@ -19,6 +19,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [middleName, setMiddleName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +28,7 @@ export default function Register() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await RegisterService.register({ email, password, firstName, lastName });
+      await RegisterService.register({ email, password, firstName, lastName, middleName });
       toast.success("Реєстрація успішна. Увійдіть до системи.");
       navigate("/login", { replace: true });
     } catch (err) {
@@ -64,6 +65,16 @@ export default function Register() {
                   placeholder="Петренко"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="middleName">По батькові</Label>
+                <Input
+                  id="middleName"
+                  placeholder="Іванович"
+                  value={middleName}
+                  onChange={(e) => setMiddleName(e.target.value)}
                   required
                 />
               </div>

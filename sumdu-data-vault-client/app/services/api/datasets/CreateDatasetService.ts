@@ -7,11 +7,12 @@ export interface CreateDatasetRequest {
   CollectedFrom: string;
   CollectedTo: string;
   MetadataJson: string;
+  UserJustification: string;
 }
 
 export interface CreateDatasetResponse {
-  id: string;
-  message?: string;
+  id: number;
+  approvalRequestId: number;
 }
 
 export class CreateDatasetService {
@@ -24,6 +25,7 @@ export class CreateDatasetService {
     formData.append('CollectedFrom', data.CollectedFrom);
     formData.append('CollectedTo', data.CollectedTo);
     formData.append('MetadataJson', data.MetadataJson);
+    formData.append('UserJustification', data.UserJustification);
 
     const response = await apiClient.post<CreateDatasetResponse>('/datasets', formData, {
       headers: {

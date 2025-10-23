@@ -39,6 +39,7 @@ namespace SumduDataVaultApi
             builder.Services.AddOpenSearch(builder.Configuration);
 
             builder.Services.AddAuthScheme(builder.Configuration);
+            builder.Services.AddApplicationServices();
             builder.Services.AddEndpoints(typeof(Program).Assembly);
 
             var app = builder.Build();

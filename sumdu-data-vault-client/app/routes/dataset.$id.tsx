@@ -7,10 +7,16 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { MetadataFieldAutocomplete } from "~/components/MetadataFieldAutocomplete";
 import { MetadataValueAutocomplete } from "~/components/MetadataValueAutocomplete";
-import { ArrowLeft, Download, Calendar, FileText, Hash, MapPin, Database, Clock } from "lucide-react";
-import GetDatasetByIdService from "~/services/api/datasets/GetDatasetByIdService";
+import { ArrowLeft, Download, Calendar, FileText, Hash, MapPin, Database, Clock, Key } from "lucide-react";
+import GetDatasetByIdService, { AccessStatus } from "~/services/api/datasets/GetDatasetByIdService";
 import DownloadDatasetService from "~/services/api/datasets/DownloadDatasetService";
 import { useState, useEffect } from "react";
+import RequestDatasetDownloadAccessService from "~/services/api/datasets/RequestDatasetDownloadAccessService";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
+import { Textarea } from "~/components/ui/textarea";
+import { Label } from "~/components/ui/label";
+import { useAuth } from "~/context/AuthContext";
+ 
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -24,6 +30,10 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRequestingAccess, setIsRequestingAccess] = useState(false);
+  const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
+  const [justificationText, setJustificationText] = useState("");
+  const { userRole } = useAuth();
 
   useEffect(() => {
     const loadDataset = async () => {
@@ -50,6 +60,27 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
       console.error('Помилка при завантаженні:', error);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleRequestAccess = async () => {
+    if (!justificationText || justificationText.trim().length === 0) {
+      return;
+    }
+    setIsRequestingAccess(true);
+    try {
+      const res = await RequestDatasetDownloadAccessService.createAccessRequest({
+        datasetId: Number(params.id),
+        userJustification: justificationText.trim(),
+      });
+      // Оновлюємо статус доступу на Requested після успішного надсилання
+      setDataset((prev: any) => prev ? { ...prev, accessStatus: AccessStatus.Requested } : null);
+      setIsAccessDialogOpen(false);
+      setJustificationText("");
+    } catch (err) {
+      console.error('Помилка при створенні запиту доступу:', err);
+    } finally {
+      setIsRequestingAccess(false);
     }
   };
 
@@ -81,7 +112,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
               className="mb-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Назад до пошуку
+              Назад
             </Button>
             <div className="space-y-4">
               <Skeleton className="h-8 w-64" />
@@ -127,7 +158,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
               className="mb-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Назад до пошуку
+              Назад
             </Button>
           </div>
           <Card>
@@ -154,7 +185,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Назад до пошуку
+            Назад
           </Button>
           <div className="flex items-center justify-between">
             <div>
@@ -163,14 +194,76 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                 ID: {dataset.id} • Створено: {formatDate(dataset.createdAt)}
               </p>
             </div>
-            <Button 
-              onClick={handleDownload}
-              disabled={isDownloading}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {isDownloading ? 'Завантаження...' : 'Завантажити CSV'}
-            </Button>
+            {dataset.accessStatus === AccessStatus.Approved || 
+             (dataset.accessStatus === AccessStatus.NotAvailable && userRole === "Admin") ? (
+              <Button 
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {isDownloading ? 'Завантаження...' : 'Завантажити CSV'}
+              </Button>
+            ) : dataset.accessStatus === AccessStatus.Requested ? (
+              <Button 
+                disabled={true}
+                className="flex items-center gap-2"
+              >
+                <Key className="h-4 w-4" />
+                Запит на розгляді
+              </Button>
+            ) : dataset.accessStatus === AccessStatus.NotAvailable ? (
+              <Button 
+                disabled={true}
+                className="flex items-center gap-2"
+              >
+                <Database className="h-4 w-4" />
+                Датасет недоступний
+              </Button>
+            ) : (
+              <Dialog open={isAccessDialogOpen} onOpenChange={setIsAccessDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-2">
+                    Запросити доступ
+                    <Key className="h-2 w-2" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Запит на доступ до датасету</DialogTitle>
+                    <DialogDescription>
+                      Вкажіть коротке обґрунтування, чому вам потрібен доступ до даних.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-2">
+                    <Label htmlFor="justification">Обґрунтування</Label>
+                    <Textarea
+                      id="justification"
+                      value={justificationText}
+                      onChange={(e) => setJustificationText(e.target.value)}
+                      placeholder="Наприклад: Потрібен для наукового дослідження"
+                      className="min-h-28"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAccessDialogOpen(false)}
+                      disabled={isRequestingAccess}
+                    >
+                      Скасувати
+                    </Button>
+                    <Button
+                      onClick={handleRequestAccess}
+                      disabled={isRequestingAccess || justificationText.trim().length === 0}
+                      className="flex items-center gap-2"
+                    >
+                      {isRequestingAccess ? 'Надсилання...' : 'Надіслати запит'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
 
