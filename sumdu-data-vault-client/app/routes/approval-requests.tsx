@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -7,14 +8,12 @@ import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
 import GetRequestsListService from '../services/api/approval/View/GetRequestsListService';
-import type { ApprovalRequestDto, RequestType, RequestStatus, ApprovalRequestFiltersDto } from '../services/api/approval/types';
-import { UserAutocomplete } from '../components/UserAutocomplete';
-import { RequestsTable } from '../components/RequestsTable';
+import type { RequestType, RequestStatus, ApprovalRequestFiltersDto } from '~/services/api/approval/types';
+import { UserAutocomplete } from '~/components/autocompletes/UserAutocomplete';
+import { RequestsTable } from '~/components/tables/RequestsTable';
+import { REQUESTS } from '~/lib/queryKeys';
 
 export default function ApprovalRequests() {
-  const [requests, setRequests] = useState<ApprovalRequestDto[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  
   // Стан для фільтрів
   const [filters, setFilters] = useState<ApprovalRequestFiltersDto>({});
   const [requestTypeFilter, setRequestTypeFilter] = useState<string>("all");
@@ -31,9 +30,42 @@ export default function ApprovalRequests() {
   // Стан для пагінації
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10); // Фіксований розмір сторінки
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
 
+  // React Query для отримання списку запитів
+  const requestsQuery = useQuery({
+    queryKey: [REQUESTS, filters, page, pageSize],
+    queryFn: async () => {
+      const skip = (page - 1) * pageSize;
+      const requestFilters: ApprovalRequestFiltersDto = {
+        ...filters,
+        skip: skip,
+        take: pageSize
+      };
+      
+      return await GetRequestsListService.getRequestsList(requestFilters);
+    },
+    staleTime: 30000, // Дані вважаються свіжими 30 секунд
+    gcTime: 300000, // Кеш зберігається 5 хвилин
+  });
+
+  // Обчислюємо загальну кількість та сторінки на основі отриманих даних
+  const requests = requestsQuery.data || [];
+  const isLoading = requestsQuery.isLoading;
+  const isError = requestsQuery.isError;
+  
+  // Оскільки наш API не повертає totalCount, ми оцінюємо його на основі отриманих даних
+  let totalCount = 0;
+  let totalPages = 0;
+  
+  if (requests.length < pageSize) {
+    // Якщо отримали менше записів ніж pageSize, то це остання сторінка
+    totalCount = (page - 1) * pageSize + requests.length;
+    totalPages = page;
+  } else {
+    // Якщо отримали повну сторінку, то можливо є ще сторінки
+    totalCount = (page - 1) * pageSize + requests.length + 1; // +1 щоб показати що є ще сторінки
+    totalPages = page + 1;
+  }
 
   const applyFilters = () => {
     const newFilters: ApprovalRequestFiltersDto = {};
@@ -73,53 +105,26 @@ export default function ApprovalRequests() {
     setPage(1); // Скидаємо на першу сторінку при очищенні фільтрів
   };
 
-  const fetchRequests = async (pageNumber?: number) => {
-    setIsLoading(true);
-    try {
-      const currentPage = pageNumber ?? page;
-      const skip = (currentPage - 1) * pageSize;
-      
-      const requestFilters: ApprovalRequestFiltersDto = {
-        ...filters,
-        skip: skip,
-        take: pageSize
-      };
-      
-      const requestsData = await GetRequestsListService.getRequestsList(requestFilters);
-      console.log('Requests data:', requestsData);
-      setRequests(requestsData);
-      
-      // Оскільки наш API не повертає totalCount, ми оцінюємо його на основі отриманих даних
-      // Якщо отримали менше записів ніж pageSize, то це остання сторінка
-      if (requestsData.length < pageSize) {
-        setTotalCount(skip + requestsData.length);
-        setTotalPages(currentPage);
-      } else {
-        // Якщо отримали повну сторінку, то можливо є ще сторінки
-        setTotalCount(skip + requestsData.length + 1); // +1 щоб показати що є ще сторінки
-        setTotalPages(currentPage + 1);
-      }
-      
-      setPage(currentPage);
-    } catch (error) {
-      console.error('Failed to fetch requests', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Обробник зміни сторінки
   const handlePageChange = (newPage: number) => {
-    fetchRequests(newPage);
+    setPage(newPage);
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, [filters]);
-
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  // Обробка станів завантаження та помилок
+  if (isError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Управління запитами</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-red-600">Помилка при завантаженні запитів. Спробуйте ще раз.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -263,9 +268,6 @@ export default function ApprovalRequests() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Список запитів</CardTitle>
-              <CardDescription>
-                Сторінка {page} з {totalPages} • Показано {requests.length} з {totalCount} запитів
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <RequestsTable

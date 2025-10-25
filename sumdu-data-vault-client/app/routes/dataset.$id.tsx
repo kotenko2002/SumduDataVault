@@ -1,23 +1,22 @@
 import type { Route } from "./+types/dataset.$id";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Badge } from "~/components/ui/badge";
-import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { MetadataFieldAutocomplete } from "~/components/MetadataFieldAutocomplete";
-import { MetadataValueAutocomplete } from "~/components/MetadataValueAutocomplete";
-import { ArrowLeft, Download, Calendar, FileText, Hash, MapPin, Database, Clock, Key } from "lucide-react";
-import GetDatasetByIdService, { AccessStatus } from "~/services/api/datasets/GetDatasetByIdService";
+import { MetadataFieldAutocomplete } from "~/components/autocompletes/MetadataFieldAutocomplete";
+import { MetadataValueAutocomplete } from "~/components/autocompletes/MetadataValueAutocomplete";
+import { ArrowLeft, Download, Calendar, FileText, Hash, Database, Key } from "lucide-react";
+import GetDatasetByIdService, { AccessStatus, type GetDatasetByIdResponse } from "~/services/api/datasets/GetDatasetByIdService";
 import DownloadDatasetService from "~/services/api/datasets/DownloadDatasetService";
-import { useState, useEffect } from "react";
-import RequestDatasetDownloadAccessService from "~/services/api/datasets/RequestDatasetDownloadAccessService";
+import { useState } from "react";
+import RequestDatasetDownloadAccessService, { type RequestDatasetDownloadAccessRequest } from "~/services/api/datasets/RequestDatasetDownloadAccessService";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "~/components/ui/dialog";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { useAuth } from "~/context/AuthContext";
+import { DATASET, REQUESTS } from "~/lib/queryKeys";
  
-
 export function meta({ params }: Route.MetaArgs) {
   return [
     { title: `Деталі датасету ${params.id} - SumduDataVault` },
@@ -26,62 +25,59 @@ export function meta({ params }: Route.MetaArgs) {
 }
 
 export default function DatasetDetails({ params }: Route.ComponentProps) {
-  const [dataset, setDataset] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isRequestingAccess, setIsRequestingAccess] = useState(false);
+  const queryClient = useQueryClient();
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [justificationText, setJustificationText] = useState("");
   const { userRole } = useAuth();
 
-  useEffect(() => {
-    const loadDataset = async () => {
-      try {
-        setLoading(true);
-        const data = await GetDatasetByIdService.getDatasetById(Number(params.id));
-        setDataset(data);
-      } catch (err) {
-        setError('Датасет не знайдено');
-        console.error('Помилка при завантаженні датасету:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // React Query для отримання датасету
+  const datasetQuery = useQuery({
+    queryKey: [DATASET, params.id, userRole],
+    queryFn: async (): Promise<GetDatasetByIdResponse> => {
+      return await GetDatasetByIdService.getDatasetById(Number(params.id));
+    },
+    enabled: !!params.id && userRole !== null,
+    staleTime: 30000, // Дані вважаються свіжими 30 секунд
+    gcTime: 300000, // Кеш зберігається 5 хвилин
+  });
 
-    loadDataset();
-  }, [params.id]);
-
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    try {
-      await DownloadDatasetService.downloadAndSaveDataset(Number(params.id));
-    } catch (error) {
+  // React Query mutation для завантаження файлу
+  const downloadMutation = useMutation({
+    mutationFn: (id: number) => DownloadDatasetService.downloadAndSaveDataset(id),
+    onError: (error: Error) => {
       console.error('Помилка при завантаженні:', error);
-    } finally {
-      setIsDownloading(false);
-    }
+    },
+  });
+
+  // React Query mutation для запиту доступу
+  const requestAccessMutation = useMutation({
+    mutationFn: (data: RequestDatasetDownloadAccessRequest) => 
+      RequestDatasetDownloadAccessService.createAccessRequest(data),
+    onSuccess: async (data, variables) => {
+      // Інвалідуємо кеш для оновлення списків запитів та конкретного датасету
+      await queryClient.invalidateQueries({ queryKey: [REQUESTS] });
+      await queryClient.invalidateQueries({ queryKey: [DATASET, params.id] });
+      
+      setIsAccessDialogOpen(false);
+      setJustificationText("");
+    },
+    onError: (error: Error) => {
+      console.error('Помилка при створенні запиту доступу:', error);
+    },
+  });
+
+  const handleDownload = () => {
+    downloadMutation.mutate(Number(params.id));
   };
 
-  const handleRequestAccess = async () => {
+  const handleRequestAccess = () => {
     if (!justificationText || justificationText.trim().length === 0) {
       return;
     }
-    setIsRequestingAccess(true);
-    try {
-      const res = await RequestDatasetDownloadAccessService.createAccessRequest({
-        datasetId: Number(params.id),
-        userJustification: justificationText.trim(),
-      });
-      // Оновлюємо статус доступу на Requested після успішного надсилання
-      setDataset((prev: any) => prev ? { ...prev, accessStatus: AccessStatus.Requested } : null);
-      setIsAccessDialogOpen(false);
-      setJustificationText("");
-    } catch (err) {
-      console.error('Помилка при створенні запиту доступу:', err);
-    } finally {
-      setIsRequestingAccess(false);
-    }
+    requestAccessMutation.mutate({
+      datasetId: Number(params.id),
+      userJustification: justificationText.trim(),
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -101,7 +97,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  if (loading) {
+  if (datasetQuery.isLoading || userRole === null) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -147,7 +143,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
     );
   }
 
-  if (error || !dataset) {
+  if (datasetQuery.error || !datasetQuery.data) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -166,7 +162,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
               <div className="text-6xl mb-4">❌</div>
               <h3 className="text-xl font-semibold mb-2">Помилка завантаження</h3>
               <p className="text-muted-foreground">
-                {error || 'Датасет не знайдено'}
+                {datasetQuery.error?.message || 'Датасет не знайдено'}
               </p>
             </CardContent>
           </Card>
@@ -189,22 +185,22 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
           </Button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{dataset.fileName}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{datasetQuery.data.fileName}</h1>
               <p className="text-muted-foreground mt-2">
-                ID: {dataset.id} • Створено: {formatDate(dataset.createdAt)}
+                ID: {datasetQuery.data.id} • Створено: {formatDate(datasetQuery.data.createdAt)}
               </p>
             </div>
-            {dataset.accessStatus === AccessStatus.Approved || 
-             (dataset.accessStatus === AccessStatus.NotAvailable && userRole === "Admin") ? (
+            {datasetQuery.data.accessStatus === AccessStatus.Approved || 
+             (datasetQuery.data.accessStatus === AccessStatus.NotAvailable && userRole === "Admin") ? (
               <Button 
                 onClick={handleDownload}
-                disabled={isDownloading}
+                disabled={downloadMutation.isPending}
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                {isDownloading ? 'Завантаження...' : 'Завантажити CSV'}
+                {downloadMutation.isPending ? 'Завантаження...' : 'Завантажити CSV'}
               </Button>
-            ) : dataset.accessStatus === AccessStatus.Requested ? (
+            ) : datasetQuery.data.accessStatus === AccessStatus.Requested ? (
               <Button 
                 disabled={true}
                 className="flex items-center gap-2"
@@ -212,7 +208,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                 <Key className="h-4 w-4" />
                 Запит на розгляді
               </Button>
-            ) : dataset.accessStatus === AccessStatus.NotAvailable ? (
+            ) : datasetQuery.data.accessStatus === AccessStatus.NotAvailable ? (
               <Button 
                 disabled={true}
                 className="flex items-center gap-2"
@@ -249,16 +245,16 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                     <Button
                       variant="outline"
                       onClick={() => setIsAccessDialogOpen(false)}
-                      disabled={isRequestingAccess}
+                      disabled={requestAccessMutation.isPending}
                     >
                       Скасувати
                     </Button>
                     <Button
                       onClick={handleRequestAccess}
-                      disabled={isRequestingAccess || justificationText.trim().length === 0}
+                      disabled={requestAccessMutation.isPending || justificationText.trim().length === 0}
                       className="flex items-center gap-2"
                     >
-                      {isRequestingAccess ? 'Надсилання...' : 'Надіслати запит'}
+                      {requestAccessMutation.isPending ? 'Надсилання...' : 'Надіслати запит'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -278,11 +274,11 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-relaxed">{dataset.description}</p>
+                <p className="text-sm leading-relaxed">{datasetQuery.data.description}</p>
               </CardContent>
             </Card>
 
-            {dataset.previewLines && dataset.previewLines.length > 0 && (
+            {datasetQuery.data.previewLines && datasetQuery.data.previewLines.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Попередній перегляд даних</CardTitle>
@@ -294,7 +290,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-100">
-                        {dataset.previewLines[0]?.split(',').map((header: string, index: number) => (
+                        {datasetQuery.data.previewLines[0]?.split(',').map((header: string, index: number) => (
                           <TableHead key={index} className="font-bold">
                             {header.trim().charAt(0).toUpperCase() + header.trim().slice(1).toLowerCase()}
                           </TableHead>
@@ -302,7 +298,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dataset.previewLines.slice(1).map((row: string, rowIndex: number) => (
+                      {datasetQuery.data.previewLines.slice(1).map((row: string, rowIndex: number) => (
                         <TableRow key={rowIndex} className="odd:bg-white even:bg-gray-50 hover:bg-muted/50">
                           {row.split(',').map((cell: string, cellIndex: number) => (
                             <TableCell key={cellIndex}>
@@ -334,11 +330,11 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">З:</span>
-                    <span className="font-medium">{formatDate(dataset.collectedFrom)}</span>
+                    <span className="font-medium">{formatDate(datasetQuery.data.collectedFrom)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">До:</span>
-                    <span className="font-medium">{formatDate(dataset.collectedTo)}</span>
+                    <span className="font-medium">{formatDate(datasetQuery.data.collectedTo)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -357,14 +353,14 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
                     <Hash className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Кількість рядків</p>
-                      <p className="text-2xl font-bold">{dataset.rowCount.toLocaleString()}</p>
+                      <p className="text-2xl font-bold">{datasetQuery.data.rowCount.toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">Розмір файлу</p>
-                      <p className="text-2xl font-bold">{formatFileSize(dataset.fileSizeBytes)}</p>
+                      <p className="text-2xl font-bold">{formatFileSize(datasetQuery.data.fileSizeBytes)}</p>
                     </div>
                   </div>
                 </div>
@@ -375,13 +371,13 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
               <CardHeader>
                 <CardTitle>Метадані</CardTitle>
                 <CardDescription>
-                  {dataset.metadataItems.length} полів метаданих
+                  {datasetQuery.data.metadataItems.length} полів метаданих
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {dataset.metadataItems.length > 0 ? (
+                {datasetQuery.data.metadataItems.length > 0 ? (
                   <div className="space-y-3">
-                    {dataset.metadataItems.map((item: any) => (
+                    {datasetQuery.data.metadataItems.map((item: any) => (
                       <div key={item.id} className="flex gap-2">
                         <div className="flex-1">
                           <MetadataFieldAutocomplete

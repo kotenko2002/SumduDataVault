@@ -20,29 +20,40 @@ type NavigationItem = {
   }>;
 };
 
-const navigationItemsAuthorized: NavigationItem[] = [
-  { 
-    title: "Головна", 
-    href: "/", 
-    type: 'link'
-  },
-  {
-    title: "Датасети",
-    type: 'dropdown',
-    items: [
-      { title: "Пошук", href: "/search" },
-      { title: "Створити", href: "/create-dataset" },
-    ]
-  },
-  {
-    title: "Заявки на доступ",
-    type: 'dropdown',
-    items: [
-      { title: "Розгляд запитів", href: "/approval-requests" },
-      { title: "Історія запитів користувача", href: "/user-request-history" },
-    ]
-  },
-];
+const getNavigationItemsAuthorized = (userRole: string | null): NavigationItem[] => {
+  const baseItems: NavigationItem[] = [
+    { 
+      title: "Головна", 
+      href: "/", 
+      type: 'link'
+    },
+    {
+      title: "Датасети",
+      type: 'dropdown',
+      items: [
+        { title: "Пошук", href: "/search" },
+        { title: "Створити", href: "/create-dataset" },
+      ]
+    },
+  ];
+
+  // Додаємо пункт залежно від ролі користувача
+  if (userRole === "Admin") {
+    baseItems.push({
+      title: "Розгляд запитів",
+      href: "/approval-requests",
+      type: 'link'
+    });
+  } else {
+    baseItems.push({
+      title: "Історія запитів користувача",
+      href: "/user-request-history",
+      type: 'link'
+    });
+  }
+
+  return baseItems;
+};
 
 const navigationItemsUnauthorized: NavigationItem[] = [
   { 
@@ -65,8 +76,8 @@ const navigationItemsUnauthorized: NavigationItem[] = [
 export function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthorized, logout } = useAuth();
-  const navigationItems = isAuthorized ? navigationItemsAuthorized : navigationItemsUnauthorized;
+  const { isAuthorized, logout, userRole } = useAuth();
+  const navigationItems = isAuthorized ? getNavigationItemsAuthorized(userRole) : navigationItemsUnauthorized;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -11,6 +11,13 @@ import type { Route } from "./+types/root";
 import { Navigation } from "./components/Navigation";
 import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "./components/ui/sonner";
+import {
+    QueryCache,
+    QueryClient,
+    QueryClientProvider,
+    type QueryOptions,
+} from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -26,6 +33,22 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            retry: 1,
+            refetchOnWindowFocus: false,
+        },
+    },
+    queryCache: new QueryCache({
+        onError: (_, query: QueryOptions) => {
+            if (query.meta?.onError && typeof query.meta?.onError === 'function') {
+                query.meta?.onError();
+            }
+        },
+    }),
+});
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uk">
@@ -36,13 +59,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <AuthProvider>
-          <Navigation />
-          {children}
-          <ScrollRestoration />
-          <Scripts />
-          <Toaster richColors position="bottom-right" />
-        </AuthProvider>
+          <QueryClientProvider client={queryClient}>
+              <AuthProvider>
+                  <Navigation />
+                  {children}
+                  <ScrollRestoration />
+                  <Scripts />
+                  <Toaster richColors position="bottom-right" />
+                  <ReactQueryDevtools initialIsOpen={false} />
+              </AuthProvider>
+          </QueryClientProvider>
       </body>
     </html>
   );

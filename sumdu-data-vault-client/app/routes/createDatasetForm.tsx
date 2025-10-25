@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Route } from "./+types/createDatasetForm";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -6,7 +7,8 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { toast } from "sonner";
-import CreateDatasetService from "~/services/api/datasets/CreateDatasetService";
+import CreateDatasetService, { type CreateDatasetRequest, type CreateDatasetResponse } from "~/services/api/datasets/CreateDatasetService";
+import { REQUESTS, DATASETS } from "~/lib/queryKeys";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -15,7 +17,7 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-interface CreateDatasetRequest {
+interface FormData {
   csv: File | null;
   description: string;
   region: string;
@@ -31,13 +33,10 @@ interface MetadataField {
   value: string;
 }
 
-interface CreateDatasetResponse {
-  id: number;
-  approvalRequestId: number;
-}
-
 export default function CreateDatasetForm() {
-  const [formData, setFormData] = useState<CreateDatasetRequest>({
+  const queryClient = useQueryClient();
+  
+  const [formData, setFormData] = useState<FormData>({
     csv: null,
     description: "",
     region: "",
@@ -49,9 +48,35 @@ export default function CreateDatasetForm() {
 
   const [metadataFields, setMetadataFields] = useState<MetadataField[]>([]);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // React Query mutation для створення датасету
+  const createDatasetMutation = useMutation({
+    mutationFn: (data: CreateDatasetRequest): Promise<CreateDatasetResponse> => 
+      CreateDatasetService.createDataset(data),
+    onSuccess: async (data) => {
+      // Очищаємо форму після успішного створення
+      setFormData({
+        csv: null,
+        description: "",
+        region: "",
+        collectedFrom: "",
+        collectedTo: "",
+        metadata: [],
+        userJustification: "",
+      });
+      setMetadataFields([]);
+      
+      // Інвалідуємо кеш для оновлення списків
+      await queryClient.invalidateQueries({ queryKey: [DATASETS] });
+      await queryClient.invalidateQueries({ queryKey: [REQUESTS] });
 
-  const handleInputChange = (field: keyof CreateDatasetRequest, value: string | File | null) => {
+      toast.success(`Датасет створено (ID: ${data.id}). Запит на апрув створено (ID: ${data.approvalRequestId}).`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Помилка при створенні датасету: ${error.message}`);
+    },
+  });
+
+  const handleInputChange = (field: keyof FormData, value: string | File | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -98,42 +123,20 @@ export default function CreateDatasetForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    setIsSubmitting(true);
-
-    try {
-      if (!formData.csv) {
-        throw new Error("Будь ласка, виберіть CSV файл");
-      }
-
-      const result = await CreateDatasetService.createDataset({
-        Csv: formData.csv,
-        Description: formData.description,
-        Region: formData.region,
-        CollectedFrom: formData.collectedFrom,
-        CollectedTo: formData.collectedTo,
-        MetadataJson: convertMetadataToJson(),
-        UserJustification: formData.userJustification.trim(),
-      });
-      
-      // Очищаємо форму одразу
-      setFormData({
-        csv: null,
-        description: "",
-        region: "",
-        collectedFrom: "",
-        collectedTo: "",
-        metadata: [],
-        userJustification: "",
-      });
-      setMetadataFields([]);
-      
-      toast.success(`Датасет створено (ID: ${result.id}). Запит на апрув створено (ID: ${result.approvalRequestId}).`);
-
-    } catch (err) {
-      toast.error(`Помилка при створенні датасету: ${err instanceof Error ? err.message : "Сталася невідома помилка"}`);
-    } finally {
-      setIsSubmitting(false);
+    if (!formData.csv) {
+      toast.error("Будь ласка, виберіть CSV файл");
+      return;
     }
+
+    createDatasetMutation.mutate({
+      Csv: formData.csv,
+      Description: formData.description,
+      Region: formData.region,
+      CollectedFrom: formData.collectedFrom,
+      CollectedTo: formData.collectedTo,
+      MetadataJson: convertMetadataToJson(),
+      UserJustification: formData.userJustification.trim(),
+    });
   };
 
 
@@ -361,10 +364,10 @@ export default function CreateDatasetForm() {
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={createDatasetMutation.isPending}
               className="min-w-[140px]"
             >
-              {isSubmitting ? (
+              {createDatasetMutation.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                   Створення...

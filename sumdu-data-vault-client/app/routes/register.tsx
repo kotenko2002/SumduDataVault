@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import type { Route } from "./+types/register";
 import { useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import RegisterService from "~/services/api/auth/RegisterService";
+import RegisterService, { type RegisterRequest } from "~/services/api/auth/RegisterService";
 import { toast } from "sonner";
 
 export function meta({}: Route.MetaArgs) {
@@ -22,20 +23,23 @@ export default function Register() {
   const [middleName, setMiddleName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await RegisterService.register({ email, password, firstName, lastName, middleName });
+  // React Query mutation для реєстрації
+  const registerMutation = useMutation({
+    mutationFn: (data: RegisterRequest): Promise<void> => 
+      RegisterService.register(data),
+    onSuccess: () => {
       toast.success("Реєстрація успішна. Увійдіть до системи.");
       navigate("/login", { replace: true });
-    } catch (err) {
-      toast.error(`Помилка реєстрації: ${err instanceof Error ? err.message : "Невідома помилка"}`);
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+    onError: (error: Error) => {
+      toast.error(`Помилка реєстрації: ${error.message}`);
+    },
+  });
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    registerMutation.mutate({ email, password, firstName, lastName, middleName });
   };
 
   return (
@@ -100,8 +104,8 @@ export default function Register() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full min-w-[140px]">
-                {isSubmitting ? "Реєстрація..." : "Зареєструватися"}
+              <Button type="submit" disabled={registerMutation.isPending} className="w-full min-w-[140px]">
+                {registerMutation.isPending ? "Реєстрація..." : "Зареєструватися"}
               </Button>
             </form>
           </CardContent>
