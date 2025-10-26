@@ -248,7 +248,7 @@ export default function ApprovalRequestDetails() {
         <div className="flex items-end gap-2 mb-6">
           <Button 
             variant="outline" 
-            onClick={() => navigate(`/${ROUTES.requests.search.admin}`)}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
