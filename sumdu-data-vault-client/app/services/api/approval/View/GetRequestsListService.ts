@@ -1,8 +1,8 @@
 import apiClient from '../../apiClient';
-import type {ApprovalRequestDto, ApprovalRequestFiltersDto} from '../types';
+import type {ApprovalRequestFiltersDto, GetRequestsListResponse} from '../types';
 
 export class GetRequestsListService {
-  static async getRequestsList(filters?: ApprovalRequestFiltersDto): Promise<ApprovalRequestDto[]> {
+  static async getRequestsList(filters?: ApprovalRequestFiltersDto): Promise<GetRequestsListResponse> {
     // Підготовка фільтрів з значеннями за замовчуванням для пагінації
     const requestFilters: ApprovalRequestFiltersDto = {
       ...filters,
@@ -11,7 +11,7 @@ export class GetRequestsListService {
       // userFullName - фільтр за ПІБ користувача (повна форма)
     };
 
-    const response = await apiClient.post<ApprovalRequestDto[]>('/requests/admin', requestFilters, {
+    const response = await apiClient.post<GetRequestsListResponse>('/requests/admin', requestFilters, {
       headers: {
         'Content-Type': 'application/json',
       },

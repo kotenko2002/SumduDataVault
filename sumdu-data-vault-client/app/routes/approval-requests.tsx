@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -7,107 +6,91 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
-import GetRequestsListService from '../services/api/approval/View/GetRequestsListService';
-import type { RequestType, RequestStatus, ApprovalRequestFiltersDto } from '~/services/api/approval/types';
 import { UserAutocomplete } from '~/components/autocompletes/UserAutocomplete';
 import { RequestsTable } from '~/components/tables/RequestsTable';
-import { REQUESTS } from '~/lib/queryKeys';
+import { useApprovalRequests, type ApprovalRequestFilters } from '~/hooks/useApprovalRequests';
 
 export default function ApprovalRequests() {
-  // Стан для фільтрів
-  const [filters, setFilters] = useState<ApprovalRequestFiltersDto>({});
-  const [requestTypeFilter, setRequestTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [userNameFilter, setUserNameFilter] = useState<string>("");
-  const [createdFromFilter, setCreatedFromFilter] = useState<string>("");
-  const [createdToFilter, setCreatedToFilter] = useState<string>("");
-  
   // Стан для управління розгортанням секцій
   const [isBasicFiltersOpen, setIsBasicFiltersOpen] = useState(true);
   const [isUserFiltersOpen, setIsUserFiltersOpen] = useState(false);
   const [isDateFiltersOpen, setIsDateFiltersOpen] = useState(false);
   
-  // Стан для пагінації
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10); // Фіксований розмір сторінки
-
-  // React Query для отримання списку запитів
-  const requestsQuery = useQuery({
-    queryKey: [REQUESTS, filters, page, pageSize],
-    queryFn: async () => {
-      const skip = (page - 1) * pageSize;
-      const requestFilters: ApprovalRequestFiltersDto = {
-        ...filters,
-        skip: skip,
-        take: pageSize
-      };
-      
-      return await GetRequestsListService.getRequestsList(requestFilters);
-    },
-    staleTime: 30000, // Дані вважаються свіжими 30 секунд
-    gcTime: 300000, // Кеш зберігається 5 хвилин
+  // Використовуємо хук для роботи з запитами
+  const {
+    requests,
+    totalCount,
+    totalPages,
+    currentPage,
+    take,
+    isLoading,
+    isError,
+    applyFilters,
+    clearFilters,
+    setPageNumber,
+    setPageSize,
+  } = useApprovalRequests({ defaultPageSize: 10 });
+  
+  // Стан для форми (локальні зміни, які ще не застосовані)
+  const [formData, setFormData] = useState<ApprovalRequestFilters>({
+    requestType: undefined,
+    status: undefined,
+    userFullName: "",
+    createdFrom: "",
+    createdTo: ""
   });
 
-  // Обчислюємо загальну кількість та сторінки на основі отриманих даних
-  const requests = requestsQuery.data || [];
-  const isLoading = requestsQuery.isLoading;
-  const isError = requestsQuery.isError;
-  
-  // Оскільки наш API не повертає totalCount, ми оцінюємо його на основі отриманих даних
-  let totalCount = 0;
-  let totalPages = 0;
-  
-  if (requests.length < pageSize) {
-    // Якщо отримали менше записів ніж pageSize, то це остання сторінка
-    totalCount = (page - 1) * pageSize + requests.length;
-    totalPages = page;
-  } else {
-    // Якщо отримали повну сторінку, то можливо є ще сторінки
-    totalCount = (page - 1) * pageSize + requests.length + 1; // +1 щоб показати що є ще сторінки
-    totalPages = page + 1;
-  }
-
-  const applyFilters = () => {
-    const newFilters: ApprovalRequestFiltersDto = {};
-    
-    if (requestTypeFilter && requestTypeFilter !== "all") {
-      newFilters.requestType = parseInt(requestTypeFilter) as RequestType;
-    }
-    
-    if (statusFilter && statusFilter !== "all") {
-      newFilters.status = parseInt(statusFilter) as RequestStatus;
-    }
-    
-    if (userNameFilter && userNameFilter.trim()) {
-      newFilters.userFullName = userNameFilter.trim();
-    }
-    
-    if (createdFromFilter) {
-      newFilters.createdFrom = new Date(createdFromFilter).toISOString();
-    }
-    
-    if (createdToFilter) {
-      newFilters.createdTo = new Date(createdToFilter).toISOString();
-    }
-    
-    setFilters(newFilters);
-    setPage(1); // Скидаємо на першу сторінку при застосуванні фільтрів
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-
-  const clearFilters = () => {
-    setRequestTypeFilter("all");
-    setStatusFilter("all");
-    setUserNameFilter("");
-    setCreatedFromFilter("");
-    setCreatedToFilter("");
-    setFilters({});
-    setPage(1); // Скидаємо на першу сторінку при очищенні фільтрів
+  const handleSelectChange = (field: 'requestType' | 'status', value: string) => {
+    const numValue = value === "all" ? undefined : Number(value);
+    setFormData(prev => ({
+      ...prev,
+      [field]: numValue
+    }));
   };
 
-  // Обробник зміни сторінки
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
+  // Функція застосування фільтрів
+  const handleApplyFilters = () => {
+    const newFilters: ApprovalRequestFilters = {};
+    
+    if (formData.requestType !== undefined) {
+      newFilters.requestType = formData.requestType;
+    }
+    
+    if (formData.status !== undefined) {
+      newFilters.status = formData.status;
+    }
+    
+    if (formData.userFullName?.trim()) {
+      newFilters.userFullName = formData.userFullName.trim();
+    }
+    
+    if (formData.createdFrom) {
+      newFilters.createdFrom = new Date(formData.createdFrom).toISOString();
+    }
+    
+    if (formData.createdTo) {
+      newFilters.createdTo = new Date(formData.createdTo).toISOString();
+    }
+    
+    applyFilters(newFilters);
+  };
+
+  const handleClearFilters = () => {
+    setFormData({
+      requestType: undefined,
+      status: undefined,
+      userFullName: "",
+      createdFrom: "",
+      createdTo: ""
+    });
+    clearFilters();
   };
 
   // Обробка станів завантаження та помилок
@@ -157,7 +140,10 @@ export default function ApprovalRequests() {
                     {/* Фільтр за типом запиту */}
                     <div className="space-y-2">
                       <Label htmlFor="request-type-filter" className="text-sm">Тип запиту</Label>
-                      <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
+                      <Select 
+                        value={formData.requestType?.toString() || "all"} 
+                        onValueChange={(value) => handleSelectChange('requestType', value)}
+                      >
                         <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Всі типи" />
                         </SelectTrigger>
@@ -172,7 +158,10 @@ export default function ApprovalRequests() {
                     {/* Фільтр за статусом */}
                     <div className="space-y-2">
                       <Label htmlFor="status-filter" className="text-sm">Статус</Label>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <Select 
+                        value={formData.status?.toString() || "all"} 
+                        onValueChange={(value) => handleSelectChange('status', value)}
+                      >
                         <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Всі статуси" />
                         </SelectTrigger>
@@ -205,8 +194,8 @@ export default function ApprovalRequests() {
                       <Input
                         id="created-from-filter"
                         type="date"
-                        value={createdFromFilter}
-                        onChange={(e) => setCreatedFromFilter(e.target.value)}
+                        value={formData.createdFrom || ""}
+                        onChange={(e) => handleInputChange('createdFrom', e.target.value)}
                         className="h-9 w-full"
                       />
                     </div>
@@ -217,8 +206,8 @@ export default function ApprovalRequests() {
                       <Input
                         id="created-to-filter"
                         type="date"
-                        value={createdToFilter}
-                        onChange={(e) => setCreatedToFilter(e.target.value)}
+                        value={formData.createdTo || ""}
+                        onChange={(e) => handleInputChange('createdTo', e.target.value)}
                         className="h-9 w-full"
                       />
                     </div>
@@ -240,8 +229,8 @@ export default function ApprovalRequests() {
                     <div className="space-y-2">
                       <Label htmlFor="user-name-filter" className="text-sm">Користувач</Label>
                       <UserAutocomplete
-                        value={userNameFilter}
-                        onChange={setUserNameFilter}
+                        value={formData.userFullName || ""}
+                        onChange={(value) => handleInputChange('userFullName', value)}
                         placeholder="Введіть ПІБ користувача"
                         className="w-full"
                       />
@@ -252,10 +241,10 @@ export default function ApprovalRequests() {
 
               {/* Кнопки управління фільтрами */}
               <div className="flex gap-2 pt-2">
-                <Button onClick={applyFilters} className="flex-1 h-9" disabled={isLoading}>
+                <Button onClick={handleApplyFilters} className="flex-1 h-9" disabled={isLoading}>
                   {isLoading ? "Завантаження..." : "Застосувати"}
                 </Button>
-                <Button variant="outline" onClick={clearFilters} className="h-9">
+                <Button variant="outline" onClick={handleClearFilters} className="h-9">
                   Очистити
                 </Button>
               </div>
@@ -265,22 +254,52 @@ export default function ApprovalRequests() {
 
         {/* Основна область з результатами - справа на великих екранах */}
         <div className="flex-1 min-w-0">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Список запитів</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RequestsTable
-                requests={requests}
-                page={page}
-                totalPages={totalPages}
-                totalCount={totalCount}
-                isLoading={isLoading}
-                showUserColumn={true}
-                onPageChange={handlePageChange}
-              />
-            </CardContent>
-          </Card>
+          {/* Обробка помилок */}
+          {isError && (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-red-600">Помилка при завантаженні запитів. Спробуйте ще раз.</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Повідомлення про відсутність результатів */}
+          {!isLoading && !isError && requests?.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <Filter className="h-12 w-12 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Результати не знайдено</h3>
+                    <p className="text-muted-foreground">Спробуйте змінити критерії пошуку</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Результати пошуку */}
+          {requests && requests.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Список запитів</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RequestsTable
+                  requests={requests}
+                  isLoading={isLoading}
+                  showUserColumn={true}
+                  pageNumber={currentPage}
+                  pageSize={take}
+                  totalPages={totalPages}
+                  totalRows={totalCount}
+                  pageSizeOptions={[5, 10, 20, 50, 100]}
+                  changePageNumber={setPageNumber}
+                  changePageSize={setPageSize}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

@@ -20,7 +20,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
                .WithTags("Approval Requests - View")
                .WithSummary("Отримати список запитів з можливістю фільтрації (тільки для адміністраторів)")
                .WithDescription("Повертає список всіх запитів з можливістю фільтрації за типом, статусом та датою створення")
-               .Produces<List<ApprovalRequestDto>>()
+               .Produces<GetRequestsListResponse>()
                .Produces(StatusCodes.Status401Unauthorized)
                .Produces(StatusCodes.Status403Forbidden)
                .RequireAuthorization(new AuthorizeAttribute { Roles = Roles.Admin });
@@ -31,7 +31,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
                .WithTags("Approval Requests - View")
                .WithSummary("Отримати список запитів поточного користувача з можливістю фільтрації")
                .WithDescription("Повертає список всіх запитів, створених поточним користувачем, з можливістю фільтрації за типом, статусом та датою створення")
-               .Produces<List<ApprovalRequestDto>>()
+               .Produces<GetRequestsListResponse>()
                .Produces(StatusCodes.Status401Unauthorized)
                .RequireAuthorization();
         }
@@ -133,13 +133,20 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
                         .Contains(filters.UserFullName));
                 }
 
+                // Підрахунок загальної кількості записів (без skip/take)
+                var total = await query.CountAsync();
+
                 var requests = await query
                     .OrderByDescending(r => r.RequestedAt)
                     .Skip(filters.Skip ?? 0)
                     .Take(filters.Take ?? 10)
                     .ToListAsync();
                 
-                var response = requests.Select(r => mapper.Map<ApprovalRequestDto>((r, true))).ToList();
+                var response = new GetRequestsListResponse
+                {
+                    Requests = requests.Select(r => mapper.Map<ApprovalRequestDto>((r, true))).ToList(),
+                    Total = total
+                };
 
                 return Results.Ok(response);
             }

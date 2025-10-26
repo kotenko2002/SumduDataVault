@@ -1,27 +1,34 @@
 import { useNavigate } from 'react-router';
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { TablePagination } from "~/components/tables/TablePagination";
+import { TableFooter } from "~/components/tables/TableFooter";
 import type { ApprovalRequestDto, RequestType, RequestStatus } from '../../services/api/approval/types';
 
 interface RequestsTableProps {
   requests: ApprovalRequestDto[];
-  page: number;
-  totalPages: number;
-  totalCount: number;
   isLoading: boolean;
   showUserColumn?: boolean; // Чи показувати колонку з користувачем (для адміністраторів)
-  onPageChange: (page: number) => void;
+  // Пагінація
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  totalRows: number;
+  pageSizeOptions: number[];
+  changePageNumber: (pageNumber: number) => void;
+  changePageSize: (pageSize: number) => void;
 }
 
 export function RequestsTable({
   requests,
-  page,
-  totalPages,
-  totalCount,
   isLoading,
   showUserColumn = false,
-  onPageChange
+  pageNumber,
+  pageSize,
+  totalPages,
+  totalRows,
+  pageSizeOptions,
+  changePageNumber,
+  changePageSize
 }: RequestsTableProps) {
   const navigate = useNavigate();
 
@@ -181,12 +188,16 @@ export function RequestsTable({
           ))}
         </TableBody>
       </Table>
-
+      
       {/* Пагінація */}
-      <TablePagination
-        page={page}
+      <TableFooter
+        pageNumber={pageNumber}
+        pageSize={pageSize}
         totalPages={totalPages}
-        onPageChange={onPageChange}
+        totalRows={totalRows}
+        pageSizeOptions={pageSizeOptions}
+        changePageNumber={changePageNumber}
+        changePageSize={changePageSize}
       />
     </div>
   );

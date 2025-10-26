@@ -44,3 +44,8 @@ export interface UserRequestFiltersDto {
   skip?: number;
   take?: number;
 }
+
+export interface GetRequestsListResponse {
+  requests: ApprovalRequestDto[];
+  total: number;
+}

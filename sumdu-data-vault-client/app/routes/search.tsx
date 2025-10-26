@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useQuery } from '@tanstack/react-query';
 import type { Route } from "./+types/search";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -10,11 +9,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "~/components/ui/hover-card";
 import { ChevronDown, ChevronUp, Search as SearchComponent, X, Info } from "lucide-react";
-import SearchDatasetService, { type SearchDatasetRequest } from "~/services/api/datasets/SearchDatasetService";
 import { MetadataFieldAutocomplete } from "~/components/autocompletes/MetadataFieldAutocomplete";
 import { MetadataValueAutocomplete } from "~/components/autocompletes/MetadataValueAutocomplete";
-import { TablePagination } from "~/components/tables/TablePagination";
-import { DATASETS } from "~/lib/queryKeys";
+import { TableFooter } from "~/components/tables/TableFooter";
+import { useDatasetSearch, type DatasetSearchFilters } from "~/hooks/useDatasetSearch";
 
 interface MetadataField {
   id: string;
@@ -36,14 +34,24 @@ export default function Search() {
   const [isSizeFiltersOpen, setIsSizeFiltersOpen] = useState(false);
   const [isMetadataFiltersOpen, setIsMetadataFiltersOpen] = useState(false);
   const [metadataFields, setMetadataFields] = useState<MetadataField[]>([]);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
   
-  // Стан для фільтрів (як в user-request-history.tsx)
-  const [filters, setFilters] = useState<SearchDatasetRequest | null>(null);
+  // Використовуємо хук для пошуку датасетів
+  const {
+    datasets,
+    totalCount,
+    totalPages,
+    currentPage,
+    take,
+    isLoading,
+    isError,
+    applyFilters,
+    clearFilters,
+    setPageNumber,
+    setPageSize,
+  } = useDatasetSearch({ defaultPageSize: 10 });
   
   // Стан для форми (локальні зміни, які ще не застосовані)
-  const [formData, setFormData] = useState<SearchDatasetRequest>({
+  const [formData, setFormData] = useState<DatasetSearchFilters>({
     description: "",
     region: "",
     collectedFrom: "",
@@ -52,29 +60,6 @@ export default function Search() {
     fileSizeBytes: { min: undefined, max: undefined },
     metadata: {}
   });
-
-  // React Query для пошуку датасетів
-  const searchQuery = useQuery({
-    queryKey: [DATASETS, filters, page, pageSize],
-    queryFn: async () => {
-      const filteredData: SearchDatasetRequest = {
-        ...(filters || {}),
-        page: page,
-        pageSize: pageSize
-      };
-
-      return await SearchDatasetService.searchDatasets(filteredData);
-    },
-    staleTime: 30000, // Дані вважаються свіжими 30 секунд
-    gcTime: 300000, // Кеш зберігається 5 хвилин
-  });
-
-  // Отримуємо дані з React Query
-  const searchResults = searchQuery.data?.datasets || [];
-  const totalCount = searchQuery.data?.totalCount || 0;
-  const totalPages = searchQuery.data?.totalPages || 0;
-  const isLoading = searchQuery.isLoading;
-  const isError = searchQuery.isError;
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -126,9 +111,9 @@ export default function Search() {
     return metadataObj;
   };
 
-  // Функція застосування фільтрів (як в user-request-history.tsx)
-  const applyFilters = () => {
-    const newFilters: SearchDatasetRequest = {};
+  // Функція застосування фільтрів
+  const handleApplyFilters = () => {
+    const newFilters: DatasetSearchFilters = {};
     
     if (formData.description?.trim()) {
       newFilters.description = formData.description.trim();
@@ -159,11 +144,10 @@ export default function Search() {
       newFilters.metadata = metadataFromFields;
     }
     
-    setFilters(newFilters);
-    setPage(1); // Скидаємо на першу сторінку при застосуванні фільтрів
+    applyFilters(newFilters);
   };
 
-  const clearFilters = () => {
+  const handleClearFilters = () => {
     setFormData({
       description: "",
       region: "",
@@ -174,13 +158,7 @@ export default function Search() {
       metadata: {}
     });
     setMetadataFields([]);
-    setFilters(null); // Скидаємо фільтри
-    setPage(1);
-  };
-
-  // Обробник зміни сторінки
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
+    clearFilters();
   };
 
   return (
@@ -389,10 +367,10 @@ export default function Search() {
 
               {/* Кнопки дій */}
               <div className="flex gap-2 pt-2">
-                <Button onClick={applyFilters} disabled={isLoading} className="flex-1 h-9">
+                <Button onClick={handleApplyFilters} disabled={isLoading} className="flex-1 h-9">
                   {isLoading ? "Пошук..." : "Шукати"}
                 </Button>
-                <Button variant="outline" onClick={clearFilters} className="h-9">
+                <Button variant="outline" onClick={handleClearFilters} className="h-9">
                   Очистити
                 </Button>
               </div>
@@ -412,7 +390,7 @@ export default function Search() {
           )}
 
           {/* Повідомлення про відсутність результатів */}
-          {!isLoading && !isError && searchResults.length === 0 && (
+          {!isLoading && !isError && datasets.length === 0 && (
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="flex flex-col items-center gap-4">
@@ -427,13 +405,10 @@ export default function Search() {
           )}
 
           {/* Результати пошуку */}
-          {searchResults.length > 0 && (
+          {datasets.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Результати пошуку</CardTitle>
-                <CardDescription>
-                  Знайдено {totalCount.toLocaleString()} записів
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -452,7 +427,7 @@ export default function Search() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {searchResults.map((dataset) => (
+                      {datasets.map((dataset) => (
                         <TableRow key={dataset.id} className="hover:bg-muted/50">
                           <TableCell className="font-mono text-sm">
                             {dataset.id}
@@ -534,10 +509,14 @@ export default function Search() {
                 </div>
 
                 {/* Пагінація */}
-                <TablePagination
-                  page={page}
+                <TableFooter
+                  pageNumber={currentPage}
+                  pageSize={take}
                   totalPages={totalPages}
-                  onPageChange={handlePageChange}
+                  totalRows={totalCount || 0}
+                  pageSizeOptions={[5, 10, 20, 50, 100]}
+                  changePageNumber={setPageNumber}
+                  changePageSize={setPageSize}
                 />
               </CardContent>
             </Card>
