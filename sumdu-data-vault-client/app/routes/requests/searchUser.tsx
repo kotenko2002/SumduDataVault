@@ -1,22 +1,20 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
-import { UserAutocomplete } from '~/components/autocompletes/UserAutocomplete';
 import { RequestsTable } from '~/components/tables/RequestsTable';
-import { useApprovalRequests, type ApprovalRequestFilters } from '~/hooks/useApprovalRequests';
+import { useUserRequests, type UserRequestFilters } from '~/hooks/useUserRequests';
 
-export default function ApprovalRequests() {
+export default function SearchUser() {
   // Стан для управління розгортанням секцій
   const [isBasicFiltersOpen, setIsBasicFiltersOpen] = useState(true);
-  const [isUserFiltersOpen, setIsUserFiltersOpen] = useState(false);
   const [isDateFiltersOpen, setIsDateFiltersOpen] = useState(false);
   
-  // Використовуємо хук для роботи з запитами
+  // Використовуємо хук для роботи з запитами користувача
   const {
     requests,
     totalCount,
@@ -29,13 +27,12 @@ export default function ApprovalRequests() {
     clearFilters,
     setPageNumber,
     setPageSize,
-  } = useApprovalRequests({ defaultPageSize: 10 });
+  } = useUserRequests({ defaultPageSize: 10 });
   
   // Стан для форми (локальні зміни, які ще не застосовані)
-  const [formData, setFormData] = useState<ApprovalRequestFilters>({
+  const [formData, setFormData] = useState<UserRequestFilters>({
     requestType: undefined,
     status: undefined,
-    userFullName: "",
     createdFrom: "",
     createdTo: ""
   });
@@ -57,7 +54,7 @@ export default function ApprovalRequests() {
 
   // Функція застосування фільтрів
   const handleApplyFilters = () => {
-    const newFilters: ApprovalRequestFilters = {};
+    const newFilters: UserRequestFilters = {};
     
     if (formData.requestType !== undefined) {
       newFilters.requestType = formData.requestType;
@@ -65,10 +62,6 @@ export default function ApprovalRequests() {
     
     if (formData.status !== undefined) {
       newFilters.status = formData.status;
-    }
-    
-    if (formData.userFullName?.trim()) {
-      newFilters.userFullName = formData.userFullName.trim();
     }
     
     if (formData.createdFrom) {
@@ -86,7 +79,6 @@ export default function ApprovalRequests() {
     setFormData({
       requestType: undefined,
       status: undefined,
-      userFullName: "",
       createdFrom: "",
       createdTo: ""
     });
@@ -98,7 +90,7 @@ export default function ApprovalRequests() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Управління запитами</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Історія моїх запитів</h1>
         </div>
         <Card>
           <CardContent className="p-6">
@@ -112,7 +104,7 @@ export default function ApprovalRequests() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Управління запитами</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Історія моїх запитів</h1>
       </div>
 
       {/* Адаптивний макет: вертикальний для малих екранів, горизонтальний для великих */}
@@ -215,30 +207,6 @@ export default function ApprovalRequests() {
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* Фільтри користувачів */}
-              <Collapsible open={isUserFiltersOpen} onOpenChange={setIsUserFiltersOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-between h-8 text-sm">
-                    👤 Фільтри користувачів
-                    {isUserFiltersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-3 mt-3">
-                  <div className="space-y-3">
-                    {/* Фільтр за користувачем */}
-                    <div className="space-y-2">
-                      <Label htmlFor="user-name-filter" className="text-sm">Користувач</Label>
-                      <UserAutocomplete
-                        value={formData.userFullName || ""}
-                        onChange={(value) => handleInputChange('userFullName', value)}
-                        placeholder="Введіть ПІБ користувача"
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
               {/* Кнопки управління фільтрами */}
               <div className="flex gap-2 pt-2">
                 <Button onClick={handleApplyFilters} className="flex-1 h-9" disabled={isLoading}>
@@ -282,13 +250,13 @@ export default function ApprovalRequests() {
           {requests && requests.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Список запитів</CardTitle>
+                <CardTitle className="text-lg">Мої запити</CardTitle>
               </CardHeader>
               <CardContent>
                 <RequestsTable
                   requests={requests}
                   isLoading={isLoading}
-                  showUserColumn={true}
+                  showUserColumn={false}
                   pageNumber={currentPage}
                   pageSize={take}
                   totalPages={totalPages}
@@ -302,7 +270,6 @@ export default function ApprovalRequests() {
           )}
         </div>
       </div>
-
     </div>
   );
 }

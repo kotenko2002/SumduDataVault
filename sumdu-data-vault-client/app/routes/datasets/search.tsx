@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import type { Route } from "./+types/search";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -13,18 +12,12 @@ import { MetadataFieldAutocomplete } from "~/components/autocompletes/MetadataFi
 import { MetadataValueAutocomplete } from "~/components/autocompletes/MetadataValueAutocomplete";
 import { TableFooter } from "~/components/tables/TableFooter";
 import { useDatasetSearch, type DatasetSearchFilters } from "~/hooks/useDatasetSearch";
+import { ROUTES } from "~/lib/routeConstants";
 
 interface MetadataField {
   id: string;
   key: string;
   value: string;
-}
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Пошук датасетів - SumduDataVault" },
-    { name: "description", content: "Пошук та фільтрація датасетів в системі" },
-  ];
 }
 
 export default function Search() {
@@ -496,7 +489,7 @@ export default function Search() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => navigate(`/dataset/${dataset.id}`)}
+                              onClick={() => navigate(`/${ROUTES.datasets.detail.replace(':id', String(dataset.id))}`)}
                               className="h-8"
                             >
                               Деталі

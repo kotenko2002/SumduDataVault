@@ -1,13 +1,14 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
+import { ROUTES, PAGES } from "./lib/routeConstants";
 
 export default [
-  index("routes/home.tsx"),
-  route("create-dataset", "routes/createDatasetForm.tsx"),
-  route("search", "routes/search.tsx"),
-  route("login", "routes/login.tsx"),
-  route("register", "routes/register.tsx"),
-  route("dataset/:id", "routes/dataset.$id.tsx"),
-  route("approval-requests", "routes/approval-requests.tsx"),
-  route("approval-request/:id", "routes/approval-request.$id.tsx"),
-  route("user-request-history", "routes/user-request-history.tsx")
+  index(PAGES.home),
+  route(ROUTES.datasets.create, PAGES.datasets.create),
+  route(ROUTES.datasets.search, PAGES.datasets.search),
+  route(ROUTES.datasets.detail, PAGES.datasets.detail),
+  route(ROUTES.auth.login, PAGES.auth.login),
+  route(ROUTES.auth.register, PAGES.auth.register),
+  route(ROUTES.requests.search.admin, PAGES.requests.search.admin),
+  route(ROUTES.requests.detail, PAGES.requests.detail),
+  route(ROUTES.requests.search.user, PAGES.requests.search.user),
 ] satisfies RouteConfig;

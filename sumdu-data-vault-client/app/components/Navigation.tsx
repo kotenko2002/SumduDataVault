@@ -9,6 +9,7 @@ import {
 } from "~/components/ui/navigation-menu";
 import { cn } from "~/lib/utils";
 import { useAuth } from "~/context/AuthContext";
+import { ROUTES } from "~/lib/routeConstants";
 
 type NavigationItem = {
   title: string;
@@ -24,15 +25,15 @@ const getNavigationItemsAuthorized = (userRole: string | null): NavigationItem[]
   const baseItems: NavigationItem[] = [
     { 
       title: "Головна", 
-      href: "/", 
+      href: `/${ROUTES.home}`, 
       type: 'link'
     },
     {
       title: "Датасети",
       type: 'dropdown',
       items: [
-        { title: "Пошук", href: "/search" },
-        { title: "Створити", href: "/create-dataset" },
+        { title: "Пошук", href: `/${ROUTES.datasets.search}` },
+        { title: "Створити", href: `/${ROUTES.datasets.create}` },
       ]
     },
   ];
@@ -41,13 +42,13 @@ const getNavigationItemsAuthorized = (userRole: string | null): NavigationItem[]
   if (userRole === "Admin") {
     baseItems.push({
       title: "Розгляд запитів",
-      href: "/approval-requests",
+      href: `/${ROUTES.requests.search.admin}`,
       type: 'link'
     });
   } else {
     baseItems.push({
       title: "Історія запитів користувача",
-      href: "/user-request-history",
+      href: `/${ROUTES.requests.search.user}`,
       type: 'link'
     });
   }
@@ -58,17 +59,17 @@ const getNavigationItemsAuthorized = (userRole: string | null): NavigationItem[]
 const navigationItemsUnauthorized: NavigationItem[] = [
   { 
     title: "Головна", 
-    href: "/", 
+    href: `/${ROUTES.home}`, 
     type: 'link'
   },
   { 
     title: "Вхід", 
-    href: "/login", 
+    href: `/${ROUTES.auth.login}`, 
     type: 'link'
   },
   { 
     title: "Реєстрація", 
-    href: "/register", 
+    href: `/${ROUTES.auth.register}`, 
     type: 'link'
   },
 ];
@@ -84,7 +85,7 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Логотип */}
-          <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+          <Link to={`/${ROUTES.home}`} className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
             <img 
               src="/logo.png" 
               alt="SumduDataVault Logo" 
@@ -140,7 +141,7 @@ export function Navigation() {
                 <NavigationMenuItem>
                   <NavigationMenuLink asChild>
                     <Link
-                      to="/login"
+                      to={`/${ROUTES.auth.login}`}
                       onClick={logout}
                       className={cn(
                         "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"

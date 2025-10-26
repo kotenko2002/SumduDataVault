@@ -11,6 +11,7 @@ import { useAuth } from '~/context/AuthContext';
 import type { ApprovalRequestDto } from '~/services/api/approval/types';
 import apiClient from '~/services/api/apiClient';
 import { REQUESTS, REQUEST } from '~/lib/queryKeys';
+import { ROUTES } from '~/lib/routeConstants';
 
 export default function ApprovalRequestDetails() {
   const { id } = useParams<{ id: string }>();
@@ -228,7 +229,7 @@ export default function ApprovalRequestDetails() {
             <p className="text-red-600">{requestQuery.error?.message || 'Запит не знайдено'}</p>
             <Button 
               variant="outline" 
-              onClick={() => navigate('/approval-requests')}
+              onClick={() => navigate(`/${ROUTES.requests.search.admin}`)}
               className="mt-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -247,7 +248,7 @@ export default function ApprovalRequestDetails() {
         <div className="flex items-end gap-2 mb-6">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/approval-requests')}
+            onClick={() => navigate(`/${ROUTES.requests.search.admin}`)}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -356,7 +357,7 @@ export default function ApprovalRequestDetails() {
                 </div>
                 <Button 
                   variant="outline"
-                  onClick={() => navigate(`/dataset/${requestQuery.data?.datasetId}`)}
+                  onClick={() => navigate(`/${ROUTES.datasets.detail.replace(':id', String(requestQuery.data?.datasetId || ''))}`)}
                 >
                   Переглянути датасет
                 </Button>

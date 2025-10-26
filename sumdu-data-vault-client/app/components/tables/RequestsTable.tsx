@@ -3,6 +3,7 @@ import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TableFooter } from "~/components/tables/TableFooter";
 import type { ApprovalRequestDto, RequestType, RequestStatus } from '../../services/api/approval/types';
+import { ROUTES } from "~/lib/routeConstants";
 
 interface RequestsTableProps {
   requests: ApprovalRequestDto[];
@@ -177,7 +178,7 @@ export function RequestsTable({
                   variant="outline" 
                   size="sm" 
                   onClick={() => {
-                    navigate(`/approval-request/${request.id}`);
+                    navigate(`/${ROUTES.requests.detail.replace(':id', String(request.id))}`);
                   }}
                   className="h-8"
                 >

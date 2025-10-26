@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import type { Route } from "./+types/login";
 import { useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -9,13 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import LoginService, { type LoginRequest } from "~/services/api/auth/LoginService";
 import { toast } from "sonner";
 import { useAuth } from "~/context/AuthContext";
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Вхід - SumduDataVault" },
-    { name: "description", content: "Увійдіть до SumduDataVault" },
-  ];
-}
 
 export default function Login() {
   const navigate = useNavigate();

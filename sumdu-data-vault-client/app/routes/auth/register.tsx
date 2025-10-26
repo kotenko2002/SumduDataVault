@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import type { Route } from "./+types/register";
 import { useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -8,13 +7,7 @@ import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import RegisterService, { type RegisterRequest } from "~/services/api/auth/RegisterService";
 import { toast } from "sonner";
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Реєстрація - SumduDataVault" },
-    { name: "description", content: "Створіть обліковий запис у SumduDataVault" },
-  ];
-}
+import { ROUTES } from "~/lib/routeConstants";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -30,7 +23,7 @@ export default function Register() {
       RegisterService.register(data),
     onSuccess: () => {
       toast.success("Реєстрація успішна. Увійдіть до системи.");
-      navigate("/login", { replace: true });
+      navigate(`/${ROUTES.auth.login}`, { replace: true });
     },
     onError: (error: Error) => {
       toast.error(`Помилка реєстрації: ${error.message}`);

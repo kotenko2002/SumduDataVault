@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Route } from "./+types/createDatasetForm";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -9,13 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { toast } from "sonner";
 import CreateDatasetService, { type CreateDatasetRequest, type CreateDatasetResponse } from "~/services/api/datasets/CreateDatasetService";
 import { REQUESTS, DATASETS } from "~/lib/queryKeys";
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Створення датасету - SumduDataVault" },
-    { name: "description", content: "Створіть новий датасет з CSV файлом та метаданими" },
-  ];
-}
 
 interface FormData {
   csv: File | null;
@@ -33,7 +25,7 @@ interface MetadataField {
   value: string;
 }
 
-export default function CreateDatasetForm() {
+export default function Create() {
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState<FormData>({

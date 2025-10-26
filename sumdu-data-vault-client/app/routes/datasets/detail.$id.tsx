@@ -1,4 +1,3 @@
-import type { Route } from "./+types/dataset.$id";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -16,15 +15,11 @@ import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
 import { useAuth } from "~/context/AuthContext";
 import { DATASET, REQUESTS } from "~/lib/queryKeys";
- 
-export function meta({ params }: Route.MetaArgs) {
-  return [
-    { title: `Деталі датасету ${params.id} - SumduDataVault` },
-    { name: "description", content: "Детальна інформація про датасет" },
-  ];
-}
+import {useParams} from "react-router";
 
-export default function DatasetDetails({ params }: Route.ComponentProps) {
+export default function DatasetDetails() {
+  const { id } = useParams<{ id: string }>();
+
   const queryClient = useQueryClient();
   const [isAccessDialogOpen, setIsAccessDialogOpen] = useState(false);
   const [justificationText, setJustificationText] = useState("");
@@ -32,13 +27,11 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
 
   // React Query для отримання датасету
   const datasetQuery = useQuery({
-    queryKey: [DATASET, params.id, userRole],
+    queryKey: [DATASET, id, userRole],
     queryFn: async (): Promise<GetDatasetByIdResponse> => {
-      return await GetDatasetByIdService.getDatasetById(Number(params.id));
+      return await GetDatasetByIdService.getDatasetById(Number(id));
     },
-    enabled: !!params.id && userRole !== null,
-    staleTime: 30000, // Дані вважаються свіжими 30 секунд
-    gcTime: 300000, // Кеш зберігається 5 хвилин
+    enabled: !!id && userRole !== null,
   });
 
   // React Query mutation для завантаження файлу
@@ -56,7 +49,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
     onSuccess: async (data, variables) => {
       // Інвалідуємо кеш для оновлення списків запитів та конкретного датасету
       await queryClient.invalidateQueries({ queryKey: [REQUESTS] });
-      await queryClient.invalidateQueries({ queryKey: [DATASET, params.id] });
+      await queryClient.invalidateQueries({ queryKey: [DATASET, id] });
       
       setIsAccessDialogOpen(false);
       setJustificationText("");
@@ -67,7 +60,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
   });
 
   const handleDownload = () => {
-    downloadMutation.mutate(Number(params.id));
+    downloadMutation.mutate(Number(id));
   };
 
   const handleRequestAccess = () => {
@@ -75,7 +68,7 @@ export default function DatasetDetails({ params }: Route.ComponentProps) {
       return;
     }
     requestAccessMutation.mutate({
-      datasetId: Number(params.id),
+      datasetId: Number(id),
       userJustification: justificationText.trim(),
     });
   };

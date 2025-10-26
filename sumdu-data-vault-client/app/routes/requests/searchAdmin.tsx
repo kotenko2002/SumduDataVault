@@ -6,15 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~
 import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { UserAutocomplete } from '~/components/autocompletes/UserAutocomplete';
 import { RequestsTable } from '~/components/tables/RequestsTable';
-import { useUserRequests, type UserRequestFilters } from '~/hooks/useUserRequests';
+import { useApprovalRequests, type ApprovalRequestFilters } from '~/hooks/useApprovalRequests';
 
-export default function UserRequestHistory() {
+export default function SearchAdmin() {
   // Стан для управління розгортанням секцій
   const [isBasicFiltersOpen, setIsBasicFiltersOpen] = useState(true);
+  const [isUserFiltersOpen, setIsUserFiltersOpen] = useState(false);
   const [isDateFiltersOpen, setIsDateFiltersOpen] = useState(false);
   
-  // Використовуємо хук для роботи з запитами користувача
+  // Використовуємо хук для роботи з запитами
   const {
     requests,
     totalCount,
@@ -27,12 +29,13 @@ export default function UserRequestHistory() {
     clearFilters,
     setPageNumber,
     setPageSize,
-  } = useUserRequests({ defaultPageSize: 10 });
+  } = useApprovalRequests({ defaultPageSize: 10 });
   
   // Стан для форми (локальні зміни, які ще не застосовані)
-  const [formData, setFormData] = useState<UserRequestFilters>({
+  const [formData, setFormData] = useState<ApprovalRequestFilters>({
     requestType: undefined,
     status: undefined,
+    userFullName: "",
     createdFrom: "",
     createdTo: ""
   });
@@ -54,7 +57,7 @@ export default function UserRequestHistory() {
 
   // Функція застосування фільтрів
   const handleApplyFilters = () => {
-    const newFilters: UserRequestFilters = {};
+    const newFilters: ApprovalRequestFilters = {};
     
     if (formData.requestType !== undefined) {
       newFilters.requestType = formData.requestType;
@@ -62,6 +65,10 @@ export default function UserRequestHistory() {
     
     if (formData.status !== undefined) {
       newFilters.status = formData.status;
+    }
+    
+    if (formData.userFullName?.trim()) {
+      newFilters.userFullName = formData.userFullName.trim();
     }
     
     if (formData.createdFrom) {
@@ -79,6 +86,7 @@ export default function UserRequestHistory() {
     setFormData({
       requestType: undefined,
       status: undefined,
+      userFullName: "",
       createdFrom: "",
       createdTo: ""
     });
@@ -90,7 +98,7 @@ export default function UserRequestHistory() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Історія моїх запитів</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Управління запитами</h1>
         </div>
         <Card>
           <CardContent className="p-6">
@@ -104,7 +112,7 @@ export default function UserRequestHistory() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Історія моїх запитів</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Управління запитами</h1>
       </div>
 
       {/* Адаптивний макет: вертикальний для малих екранів, горизонтальний для великих */}
@@ -207,6 +215,30 @@ export default function UserRequestHistory() {
                 </CollapsibleContent>
               </Collapsible>
 
+              {/* Фільтри користувачів */}
+              <Collapsible open={isUserFiltersOpen} onOpenChange={setIsUserFiltersOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between h-8 text-sm">
+                    👤 Фільтри користувачів
+                    {isUserFiltersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 mt-3">
+                  <div className="space-y-3">
+                    {/* Фільтр за користувачем */}
+                    <div className="space-y-2">
+                      <Label htmlFor="user-name-filter" className="text-sm">Користувач</Label>
+                      <UserAutocomplete
+                        value={formData.userFullName || ""}
+                        onChange={(value) => handleInputChange('userFullName', value)}
+                        placeholder="Введіть ПІБ користувача"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
               {/* Кнопки управління фільтрами */}
               <div className="flex gap-2 pt-2">
                 <Button onClick={handleApplyFilters} className="flex-1 h-9" disabled={isLoading}>
@@ -250,13 +282,13 @@ export default function UserRequestHistory() {
           {requests && requests.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Мої запити</CardTitle>
+                <CardTitle className="text-lg">Список запитів</CardTitle>
               </CardHeader>
               <CardContent>
                 <RequestsTable
                   requests={requests}
                   isLoading={isLoading}
-                  showUserColumn={false}
+                  showUserColumn={true}
                   pageNumber={currentPage}
                   pageSize={take}
                   totalPages={totalPages}
@@ -270,6 +302,7 @@ export default function UserRequestHistory() {
           )}
         </div>
       </div>
+
     </div>
   );
 }
