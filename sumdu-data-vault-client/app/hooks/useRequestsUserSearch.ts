@@ -4,19 +4,19 @@ import GetUserRequestsService from '~/services/api/approval/View/GetUserRequests
 import type { UserRequestFiltersDto } from '~/services/api/approval/types';
 import { REQUESTS } from '~/lib/queryKeys';
 
-export interface UserRequestFilters {
+export interface RequestsUserSearchFilters {
   requestType?: number;
   status?: number;
   createdFrom?: string;
   createdTo?: string;
 }
 
-interface UseUserRequestsProps {
+interface UseRequestsUserSearchProps {
   defaultPageSize?: number;
 }
 
-export const useUserRequests = ({ defaultPageSize = 10 }: UseUserRequestsProps = {}) => {
-  const [filters, setFilters] = useState<UserRequestFilters | null>(null);
+export const useRequestsUserSearch = ({ defaultPageSize = 10 }: UseRequestsUserSearchProps = {}) => {
+  const [filters, setFilters] = useState<RequestsUserSearchFilters | null>(null);
   const [skip, setSkip] = useState(0);
   const [take, setTake] = useState(defaultPageSize);
 
@@ -49,7 +49,7 @@ export const useUserRequests = ({ defaultPageSize = 10 }: UseUserRequestsProps =
   );
 
   // Функції для управління фільтрами
-  const applyFilters = (newFilters: UserRequestFilters) => {
+  const applyFilters = (newFilters: RequestsUserSearchFilters) => {
     setFilters(newFilters);
     setSkip(0); // Скидаємо на першу сторінку при застосуванні фільтрів
   };

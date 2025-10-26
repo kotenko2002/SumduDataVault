@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/component
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { UserAutocomplete } from '~/components/autocompletes/UserAutocomplete';
 import { RequestsTable } from '~/components/tables/RequestsTable';
-import { useApprovalRequests, type ApprovalRequestFilters } from '~/hooks/useApprovalRequests';
+import { useRequestsAdminSearch, type RequestsAdminSearchFilters } from '~/hooks/useRequestsAdminSearch';
 
 export default function SearchAdmin() {
   // Стан для управління розгортанням секцій
@@ -29,10 +29,10 @@ export default function SearchAdmin() {
     clearFilters,
     setPageNumber,
     setPageSize,
-  } = useApprovalRequests({ defaultPageSize: 10 });
+  } = useRequestsAdminSearch({ defaultPageSize: 10 });
   
   // Стан для форми (локальні зміни, які ще не застосовані)
-  const [formData, setFormData] = useState<ApprovalRequestFilters>({
+  const [formData, setFormData] = useState<RequestsAdminSearchFilters>({
     requestType: undefined,
     status: undefined,
     userFullName: "",
@@ -57,7 +57,7 @@ export default function SearchAdmin() {
 
   // Функція застосування фільтрів
   const handleApplyFilters = () => {
-    const newFilters: ApprovalRequestFilters = {};
+    const newFilters: RequestsAdminSearchFilters = {};
     
     if (formData.requestType !== undefined) {
       newFilters.requestType = formData.requestType;

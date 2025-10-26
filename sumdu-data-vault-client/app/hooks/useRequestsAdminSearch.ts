@@ -4,7 +4,7 @@ import GetRequestsListService from '~/services/api/approval/View/GetRequestsList
 import type { ApprovalRequestFiltersDto } from '~/services/api/approval/types';
 import { REQUESTS } from '~/lib/queryKeys';
 
-export interface ApprovalRequestFilters {
+export interface RequestsAdminSearchFilters {
   requestType?: number;
   status?: number;
   userFullName?: string;
@@ -12,12 +12,12 @@ export interface ApprovalRequestFilters {
   createdTo?: string;
 }
 
-interface UseApprovalRequestsProps {
+interface UseRequestsAdminSearchProps {
   defaultPageSize?: number;
 }
 
-export const useApprovalRequests = ({ defaultPageSize = 10 }: UseApprovalRequestsProps = {}) => {
-  const [filters, setFilters] = useState<ApprovalRequestFilters | null>(null);
+export const useRequestsAdminSearch = ({ defaultPageSize = 10 }: UseRequestsAdminSearchProps = {}) => {
+  const [filters, setFilters] = useState<RequestsAdminSearchFilters | null>(null);
   const [skip, setSkip] = useState(0);
   const [take, setTake] = useState(defaultPageSize);
 
@@ -50,7 +50,7 @@ export const useApprovalRequests = ({ defaultPageSize = 10 }: UseApprovalRequest
   );
 
   // Функції для управління фільтрами
-  const applyFilters = (newFilters: ApprovalRequestFilters) => {
+  const applyFilters = (newFilters: RequestsAdminSearchFilters) => {
     setFilters(newFilters);
     setSkip(0); // Скидаємо на першу сторінку при застосуванні фільтрів
   };

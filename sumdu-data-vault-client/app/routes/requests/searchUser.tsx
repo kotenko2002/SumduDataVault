@@ -7,7 +7,7 @@ import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { RequestsTable } from '~/components/tables/RequestsTable';
-import { useUserRequests, type UserRequestFilters } from '~/hooks/useUserRequests';
+import { useRequestsUserSearch, type RequestsUserSearchFilters } from '~/hooks/useRequestsUserSearch';
 
 export default function SearchUser() {
   // Стан для управління розгортанням секцій
@@ -27,10 +27,10 @@ export default function SearchUser() {
     clearFilters,
     setPageNumber,
     setPageSize,
-  } = useUserRequests({ defaultPageSize: 10 });
+  } = useRequestsUserSearch({ defaultPageSize: 10 });
   
   // Стан для форми (локальні зміни, які ще не застосовані)
-  const [formData, setFormData] = useState<UserRequestFilters>({
+  const [formData, setFormData] = useState<RequestsUserSearchFilters>({
     requestType: undefined,
     status: undefined,
     createdFrom: "",
@@ -54,7 +54,7 @@ export default function SearchUser() {
 
   // Функція застосування фільтрів
   const handleApplyFilters = () => {
-    const newFilters: UserRequestFilters = {};
+    const newFilters: RequestsUserSearchFilters = {};
     
     if (formData.requestType !== undefined) {
       newFilters.requestType = formData.requestType;
