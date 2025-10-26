@@ -1,32 +1,91 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Textarea } from "~/components/ui/textarea";
 import { Label } from "~/components/ui/label";
-import { ArrowLeft, User, Calendar, FileText, CheckCircle, XCircle, Clock, AlertCircle, Check, X } from "lucide-react";
-import GetRequestByIdService from '~/services/api/approval/View/GetRequestByIdService';
-import ApproveRequestService from '~/services/api/approval/Manage/ApproveRequestService';
-import RejectRequestService from '~/services/api/approval/Manage/RejectRequestService';
-import CancelRequestService from '~/services/api/approval/Manage/CancelRequestService';
+import { ArrowLeft, User, Calendar, FileText, Check, X } from "lucide-react";
 import { useAuth } from '~/context/AuthContext';
 import type { ApprovalRequestDto } from '~/services/api/approval/types';
+import apiClient from '~/services/api/apiClient';
+import { REQUESTS, REQUEST } from '~/lib/queryKeys';
+import { ROUTES } from '~/lib/routeConstants';
 
 export default function ApprovalRequestDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { userRole } = useAuth();
-  const [request, setRequest] = useState<ApprovalRequestDto | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  const queryClient = useQueryClient();
+
+  // React Query для отримання запиту
+  const requestQuery = useQuery({
+    queryKey: [REQUEST, id, userRole],
+    queryFn: async () => {
+      if (!id) return null;
+      
+      const response = userRole === 'Admin' 
+        ? await apiClient.get<ApprovalRequestDto>(`/requests/admin/${id}`, {
+            headers: { 'Content-Type': 'application/json' }
+          })
+        : await apiClient.get<ApprovalRequestDto>(`/requests/${id}`, {
+            headers: { 'Content-Type': 'application/json' }
+          });
+      
+      return response.data;
+    },
+    enabled: !!id && userRole !== null, // Виконуємо запит тільки коли є ID та роль завантажена
+  });
+
+  const approveRequestMutation = useMutation({
+    mutationFn: ({ id, request }: { id: number; request: { adminComments: string } }) =>
+      apiClient.post(`/requests/${id}/approve`, request, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    onSuccess: async () => {
+      // Інвалідуємо кеш для оновлення списку запитів та конкретного запиту
+      await queryClient.invalidateQueries({ queryKey: [REQUESTS] });
+      await queryClient.invalidateQueries({ queryKey: [REQUEST, id] });
+    },
+  });
+
+  const rejectRequestMutation = useMutation({
+    mutationFn: ({ id, request }: { id: number; request: { adminComments: string } }) =>
+      apiClient.post(`/requests/${id}/reject`, request, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    onSuccess: async () => {
+      // Інвалідуємо кеш для оновлення списку запитів та конкретного запиту
+      await queryClient.invalidateQueries({ queryKey: [REQUESTS] });
+      await queryClient.invalidateQueries({ queryKey: [REQUEST, id] });
+    },
+  });
+
+  const cancelRequestMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiClient.post(`/requests/${id}/cancel`, {}, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    onSuccess: async () => {
+      // Інвалідуємо кеш для оновлення списку запитів та конкретного запиту
+      await queryClient.invalidateQueries({ queryKey: [REQUESTS] });
+      await queryClient.invalidateQueries({ queryKey: [REQUEST, id] });
+    },
+  });
   
   // Стан для модальних вікон та обробки запитів
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [adminComments, setAdminComments] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const getRequestTypeLabel = (requestType: number): string => {
     switch (requestType) {
@@ -51,21 +110,6 @@ export default function ApprovalRequestDetails() {
         return 'Скасовано';
       default:
         return status;
-    }
-  };
-
-  const getRequestStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
-      case 'Approved':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case 'Rejected':
-        return <XCircle className="h-5 w-5 text-red-600" />;
-      case 'Canceled':
-        return <AlertCircle className="h-5 w-5 text-gray-600" />;
-      default:
-        return <AlertCircle className="h-5 w-5 text-gray-600" />;
     }
   };
 
@@ -117,98 +161,53 @@ export default function ApprovalRequestDetails() {
   const handleApprove = async () => {
     if (!id || !adminComments.trim()) return;
     
-    setIsProcessing(true);
     try {
-      await ApproveRequestService.approveRequest(parseInt(id), { adminComments: adminComments.trim() });
+      await approveRequestMutation.mutateAsync({
+        id: parseInt(id),
+        request: { adminComments: adminComments.trim() }
+      });
       console.log('Request approved successfully:', id);
-      // Оновлюємо дані запиту після успішного схвалення
-      await fetchRequest();
       setIsApproveDialogOpen(false);
       setAdminComments("");
     } catch (error) {
       console.error('Failed to approve request:', error);
       alert('Помилка при схваленні запиту. Спробуйте ще раз.');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const handleReject = async () => {
     if (!id || !adminComments.trim()) return;
     
-    setIsProcessing(true);
     try {
-      await RejectRequestService.rejectRequest(parseInt(id), { adminComments: adminComments.trim() });
+      await rejectRequestMutation.mutateAsync({
+        id: parseInt(id),
+        request: { adminComments: adminComments.trim() }
+      });
       console.log('Request rejected successfully:', id);
-      // Оновлюємо дані запиту після успішного відхилення
-      await fetchRequest();
       setIsRejectDialogOpen(false);
       setAdminComments("");
     } catch (error) {
       console.error('Failed to reject request:', error);
       alert('Помилка при відхиленні запиту. Спробуйте ще раз.');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const handleCancel = async () => {
     if (!id) return;
     
-    setIsProcessing(true);
     try {
-      await CancelRequestService.cancelRequest(parseInt(id));
+      await cancelRequestMutation.mutateAsync(parseInt(id));
       console.log('Request canceled successfully:', id);
-      // Оновлюємо дані запиту після успішного скасування
-      await fetchRequest();
       setIsCancelDialogOpen(false);
       setAdminComments("");
     } catch (error) {
       console.error('Failed to cancel request:', error);
       alert('Помилка при скасуванні запиту. Спробуйте ще раз.');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
-  const fetchRequest = async () => {
-    if (!id) {
-      setError('ID запиту не вказано');
-      setIsLoading(false);
-      return;
-    }
 
-    // Якщо роль ще не завантажена, чекаємо
-    if (userRole === null) {
-      console.log('UserRole is null, waiting for auth to load...');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      // Логування для діагностики
-      console.log('Current userRole:', userRole);
-      console.log('userRole type:', typeof userRole);
-      console.log('userRole === "Admin":', userRole === 'Admin');
-      
-      // Вибираємо ендпоінт залежно від ролі користувача
-      const requestData = userRole === 'Admin' 
-        ? await GetRequestByIdService.getRequestByIdAdmin(parseInt(id))
-        : await GetRequestByIdService.getRequestById(parseInt(id));
-      setRequest(requestData);
-    } catch (error) {
-      console.error('Помилка при завантаженні запиту:', error);
-      setError('Не вдалося завантажити деталі запиту');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRequest();
-  }, [id, userRole]);
-
-  if (isLoading || userRole === null) {
+  if (requestQuery.isLoading || userRole === null) {
     return (
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
@@ -222,15 +221,15 @@ export default function ApprovalRequestDetails() {
     );
   }
 
-  if (error || !request) {
+  if (requestQuery.error || !requestQuery.data) {
     return (
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="bg-card border rounded-lg p-6">
-            <p className="text-red-600">{error || 'Запит не знайдено'}</p>
+            <p className="text-red-600">{requestQuery.error?.message || 'Запит не знайдено'}</p>
             <Button 
               variant="outline" 
-              onClick={() => navigate('/approval-requests')}
+              onClick={() => navigate(`/${ROUTES.requests.search.admin}`)}
               className="mt-4"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -249,16 +248,16 @@ export default function ApprovalRequestDetails() {
         <div className="flex items-end gap-2 mb-6">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/approval-requests')}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Назад
           </Button>
           <div className="flex items-end gap-2">
-            <h1 className="text-3xl font-bold">{getRequestTypeLabel(request.requestType)}</h1>
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRequestStatusColors(request.status).bg} ${getRequestStatusColors(request.status).text}`}>
-              {getRequestStatusLabel(request.status)}
+            <h1 className="text-3xl font-bold">{getRequestTypeLabel(requestQuery.data.requestType)}</h1>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRequestStatusColors(requestQuery.data.status).bg} ${getRequestStatusColors(requestQuery.data.status).text}`}>
+              {getRequestStatusLabel(requestQuery.data.status)}
             </span>
           </div>
         </div>
@@ -276,13 +275,13 @@ export default function ApprovalRequestDetails() {
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Користувач:</span>
-                <span className="font-medium">{request.requestingUserName}</span>
+                <span className="font-medium">{requestQuery.data.requestingUserName}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Дата запиту:</span>
                 <span className="font-medium">
-                  {new Date(request.requestedAt).toLocaleDateString('uk-UA', {
+                  {new Date(requestQuery.data.requestedAt).toLocaleDateString('uk-UA', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
@@ -293,13 +292,13 @@ export default function ApprovalRequestDetails() {
               </div>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="whitespace-pre-wrap">{request.userJustification}</p>
+              <p className="whitespace-pre-wrap">{requestQuery.data.userJustification}</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Рішення адміністратора */}
-        {request.adminComments && (
+        {requestQuery.data.adminComments && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -309,19 +308,19 @@ export default function ApprovalRequestDetails() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {request.adminName && (
+                {requestQuery.data.adminName && (
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Адміністратор:</span>
-                    <span className="font-medium">{request.adminName}</span>
+                    <span className="font-medium">{requestQuery.data.adminName}</span>
                   </div>
                 )}
-                {request.processedAt && (
+                {requestQuery.data.processedAt && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">Дата обробки:</span>
                     <span className="font-medium">
-                      {new Date(request.processedAt).toLocaleDateString('uk-UA', {
+                      {new Date(requestQuery.data.processedAt).toLocaleDateString('uk-UA', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
@@ -333,14 +332,14 @@ export default function ApprovalRequestDetails() {
                 )}
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="whitespace-pre-wrap">{request.adminComments}</p>
+                <p className="whitespace-pre-wrap">{requestQuery.data.adminComments}</p>
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Об'єкт запиту */}
-        {request.datasetId && (
+        {requestQuery.data.datasetId && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -351,14 +350,14 @@ export default function ApprovalRequestDetails() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">ID: {request.datasetId}</p>
-                  {request.datasetName && (
-                    <p className="text-sm text-muted-foreground">{request.datasetName}</p>
+                  <p className="font-medium">ID: {requestQuery.data.datasetId}</p>
+                  {requestQuery.data.datasetName && (
+                    <p className="text-sm text-muted-foreground">{requestQuery.data.datasetName}</p>
                   )}
                 </div>
                 <Button 
                   variant="outline"
-                  onClick={() => navigate(`/dataset/${request.datasetId}`)}
+                  onClick={() => navigate(`/${ROUTES.datasets.detail.replace(':id', String(requestQuery.data?.datasetId || ''))}`)}
                 >
                   Переглянути датасет
                 </Button>
@@ -368,7 +367,7 @@ export default function ApprovalRequestDetails() {
         )}
 
         {/* Кнопки дій для запитів в статусі "Pending" */}
-        {request.status === 'Pending' && (
+        {requestQuery.data.status === 'Pending' && (
           <div className="flex justify-end gap-4">
             {userRole === 'Admin' ? (
               // Кнопки для адміністраторів
@@ -424,17 +423,17 @@ export default function ApprovalRequestDetails() {
             <Button
               variant="outline"
               onClick={() => setIsApproveDialogOpen(false)}
-              disabled={isProcessing}
+              disabled={approveRequestMutation.isPending}
             >
               Скасувати
             </Button>
             <Button
               onClick={handleApprove}
-              disabled={isProcessing || adminComments.trim().length === 0}
+              disabled={approveRequestMutation.isPending || adminComments.trim().length === 0}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
             >
               <Check className="h-4 w-4" />
-              {isProcessing ? 'Схвалення...' : 'Схвалити'}
+              {approveRequestMutation.isPending ? 'Схвалення...' : 'Схвалити'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -463,17 +462,17 @@ export default function ApprovalRequestDetails() {
             <Button
               variant="outline"
               onClick={() => setIsRejectDialogOpen(false)}
-              disabled={isProcessing}
+              disabled={rejectRequestMutation.isPending}
             >
               Скасувати
             </Button>
             <Button
               onClick={handleReject}
-              disabled={isProcessing || adminComments.trim().length === 0}
+              disabled={rejectRequestMutation.isPending || adminComments.trim().length === 0}
               className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
             >
               <X className="h-4 w-4" />
-              {isProcessing ? 'Відхилення...' : 'Відхилити'}
+              {rejectRequestMutation.isPending ? 'Відхилення...' : 'Відхилити'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -492,17 +491,17 @@ export default function ApprovalRequestDetails() {
             <Button
               variant="outline"
               onClick={() => setIsCancelDialogOpen(false)}
-              disabled={isProcessing}
+              disabled={cancelRequestMutation.isPending}
             >
               Скасувати
             </Button>
             <Button
               onClick={handleCancel}
-              disabled={isProcessing}
+              disabled={cancelRequestMutation.isPending}
               className="flex items-center gap-2 bg-red-600 hover:bg-red-700"
             >
               <X className="h-4 w-4" />
-              {isProcessing ? 'Скасування...' : 'Скасувати запит'}
+              {cancelRequestMutation.isPending ? 'Скасування...' : 'Скасувати запит'}
             </Button>
           </DialogFooter>
         </DialogContent>

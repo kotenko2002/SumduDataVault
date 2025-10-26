@@ -1,42 +1,37 @@
 import { useState } from "react";
-import type { Route } from "./+types/login";
+import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import LoginService from "~/services/api/auth/LoginService";
+import LoginService, { type LoginRequest } from "~/services/api/auth/LoginService";
 import { toast } from "sonner";
 import { useAuth } from "~/context/AuthContext";
-
-export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "Вхід - SumduDataVault" },
-    { name: "description", content: "Увійдіть до SumduDataVault" },
-  ];
-}
 
 export default function Login() {
   const navigate = useNavigate();
   const { updateAuthFromToken } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const token = await LoginService.login({ email, password });
+  // React Query mutation для входу
+  const loginMutation = useMutation({
+    mutationFn: (data: LoginRequest): Promise<string> => LoginService.login(data),
+    onSuccess: (token) => {
       localStorage.setItem("accessToken", token);
       updateAuthFromToken();
       toast.success("Вхід виконано успішно");
       navigate("/", { replace: true });
-    } catch (err) {
-      toast.error(`Помилка входу: ${err instanceof Error ? err.message : "Невідома помилка"}`);
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+    onError: (error: Error) => {
+      toast.error(`Помилка входу: ${error.message}`);
+    },
+  });
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    loginMutation.mutate({ email, password });
   };
 
   return (
@@ -71,8 +66,8 @@ export default function Login() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={isSubmitting} className="w-full min-w-[140px]">
-                {isSubmitting ? "Вхід..." : "Увійти"}
+              <Button type="submit" disabled={loginMutation.isPending} className="w-full min-w-[140px]">
+                {loginMutation.isPending ? "Вхід..." : "Увійти"}
               </Button>
             </form>
           </CardContent>
@@ -81,5 +76,3 @@ export default function Login() {
     </div>
   );
 }
-
-

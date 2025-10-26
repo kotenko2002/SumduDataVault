@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import useDebounce from 'react-use/lib/useDebounce';
+import { useQuery } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "~/components/ui/command";
 import { Input } from "~/components/ui/input";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import GetMetadataFieldsService from "~/services/api/metadata/GetMetadataFieldsService";
+import { METADATA_FIELDS } from "~/lib/queryKeys";
 
 interface MetadataFieldAutocompleteProps {
   value: string;
@@ -22,49 +25,39 @@ export function MetadataFieldAutocomplete({
   disabled = false
 }: MetadataFieldAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchValue, setSearchValue] = useState(value);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState(searchValue);
 
-  // Debounce функція для затримки запитів
-  const debounce = (func: () => void, delay: number) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(func, delay);
-  };
+  useDebounce(
+    () => setDebouncedSearchValue(searchValue),
+    800,
+    [searchValue]
+  );
 
-  // Функція для отримання пропозицій
-  const fetchSuggestions = async (searchTerm: string) => {
-    if (searchTerm.length < 1) {
-      setSuggestions([]);
-      return;
-    }
+  // Визначаємо чи відбувається дебаунс
+  const isDebouncing = searchValue !== debouncedSearchValue;
 
-    setIsLoading(true);
-    try {
+  // Синхронізація зовнішнього значення
+  useEffect(() => {
+    setSearchValue(value);
+  }, [value]);
+
+  // React Query для отримання пропозицій
+  const { data: suggestions = [], isLoading } = useQuery({
+    queryKey: [METADATA_FIELDS, debouncedSearchValue],
+    queryFn: async () => {
       const response = await GetMetadataFieldsService.getMetadataFields({
-        search: searchTerm
+        search: debouncedSearchValue
       });
-      setSuggestions(response.fields);
-    } catch (error) {
-      console.error('Помилка отримання пропозицій:', error);
-      setSuggestions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return response.fields;
+    },
+    enabled: debouncedSearchValue.length > 0,
+  });
 
   // Обробка зміни введеного тексту
   const handleInputChange = (inputValue: string) => {
     setSearchValue(inputValue);
     onChange(inputValue);
-
-    // Debounce запит на 300ms
-    debounce(() => {
-      fetchSuggestions(inputValue);
-    }, 800);
   };
 
   // Обробка вибору пропозиції
@@ -73,20 +66,6 @@ export function MetadataFieldAutocomplete({
     onChange(selectedValue);
     setOpen(false);
   };
-
-  // Синхронізація зовнішнього значення
-  useEffect(() => {
-    setSearchValue(value);
-  }, [value]);
-
-  // Очищення таймауту при розмонтуванні
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <Popover open={open && !disabled} onOpenChange={setOpen}>
@@ -97,7 +76,7 @@ export function MetadataFieldAutocomplete({
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={() => {
               if (searchValue.length >= 1) {
-                fetchSuggestions(searchValue);
+                setOpen(true);
               }
             }}
             placeholder={placeholder}
@@ -110,19 +89,19 @@ export function MetadataFieldAutocomplete({
         <Command>
           <CommandInput placeholder="Пошук полів..." value={searchValue} onValueChange={handleInputChange} />
           <CommandList>
-            {isLoading ? (
+            {isLoading || isDebouncing ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 <span className="text-sm text-muted-foreground">Завантаження...</span>
               </div>
-            ) : suggestions.length === 0 ? (
+            ) : suggestions.length === 0 && !isLoading && !isDebouncing ? (
               <CommandEmpty>
                 {searchValue.length < 1 
                   ? "Пошук від 1 символа" 
                   : "Пропозиції не знайдено"
                 }
               </CommandEmpty>
-            ) : (
+            ) : suggestions.length > 0 ? (
               <CommandGroup>
                 {suggestions.map((suggestion) => (
                   <CommandItem
@@ -141,7 +120,7 @@ export function MetadataFieldAutocomplete({
                   </CommandItem>
                 ))}
               </CommandGroup>
-            )}
+            ) : null}
           </CommandList>
         </Command>
       </PopoverContent>

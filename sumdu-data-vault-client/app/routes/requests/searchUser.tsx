@@ -1,115 +1,105 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Input } from "~/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
-import GetUserRequestsService from '../services/api/approval/View/GetUserRequestsService';
-import type { ApprovalRequestDto, RequestType, RequestStatus, UserRequestFiltersDto } from '../services/api/approval/types';
-import { RequestsTable } from '../components/RequestsTable';
+import { RequestsTable } from '~/components/tables/RequestsTable';
+import { useRequestsUserSearch, type RequestsUserSearchFilters } from '~/hooks/useRequestsUserSearch';
 
-export default function UserRequestHistory() {
-  const [requests, setRequests] = useState<ApprovalRequestDto[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Стан для фільтрів
-  const [filters, setFilters] = useState<UserRequestFiltersDto>({});
-  const [requestTypeFilter, setRequestTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [createdFromFilter, setCreatedFromFilter] = useState<string>("");
-  const [createdToFilter, setCreatedToFilter] = useState<string>("");
-  
+export default function SearchUser() {
   // Стан для управління розгортанням секцій
   const [isBasicFiltersOpen, setIsBasicFiltersOpen] = useState(true);
   const [isDateFiltersOpen, setIsDateFiltersOpen] = useState(false);
   
-  // Стан для пагінації
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10); // Фіксований розмір сторінки
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  // Використовуємо хук для роботи з запитами користувача
+  const {
+    requests,
+    totalCount,
+    totalPages,
+    currentPage,
+    take,
+    isLoading,
+    isError,
+    applyFilters,
+    clearFilters,
+    setPageNumber,
+    setPageSize,
+  } = useRequestsUserSearch({ defaultPageSize: 10 });
+  
+  // Стан для форми (локальні зміни, які ще не застосовані)
+  const [formData, setFormData] = useState<RequestsUserSearchFilters>({
+    requestType: undefined,
+    status: undefined,
+    createdFrom: "",
+    createdTo: ""
+  });
 
-  const applyFilters = () => {
-    const newFilters: UserRequestFiltersDto = {};
-    
-    if (requestTypeFilter && requestTypeFilter !== "all") {
-      newFilters.requestType = parseInt(requestTypeFilter) as RequestType;
-    }
-    
-    if (statusFilter && statusFilter !== "all") {
-      newFilters.status = parseInt(statusFilter) as RequestStatus;
-    }
-    
-    if (createdFromFilter) {
-      newFilters.createdFrom = new Date(createdFromFilter).toISOString();
-    }
-    
-    if (createdToFilter) {
-      newFilters.createdTo = new Date(createdToFilter).toISOString();
-    }
-    
-    setFilters(newFilters);
-    setPage(1); // Скидаємо на першу сторінку при застосуванні фільтрів
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const clearFilters = () => {
-    setRequestTypeFilter("all");
-    setStatusFilter("all");
-    setCreatedFromFilter("");
-    setCreatedToFilter("");
-    setFilters({});
-    setPage(1); // Скидаємо на першу сторінку при очищенні фільтрів
+  const handleSelectChange = (field: 'requestType' | 'status', value: string) => {
+    const numValue = value === "all" ? undefined : Number(value);
+    setFormData(prev => ({
+      ...prev,
+      [field]: numValue
+    }));
   };
 
-  const fetchRequests = async (pageNumber?: number) => {
-    setIsLoading(true);
-    try {
-      const currentPage = pageNumber ?? page;
-      const skip = (currentPage - 1) * pageSize;
-      
-      const requestFilters: UserRequestFiltersDto = {
-        ...filters,
-        skip: skip,
-        take: pageSize
-      };
-      
-      const requestsData = await GetUserRequestsService.getUserRequests(requestFilters);
-      console.log('User requests data:', requestsData);
-      setRequests(requestsData);
-      
-      // Оскільки наш API не повертає totalCount, ми оцінюємо його на основі отриманих даних
-      // Якщо отримали менше записів ніж pageSize, то це остання сторінка
-      if (requestsData.length < pageSize) {
-        setTotalCount(skip + requestsData.length);
-        setTotalPages(currentPage);
-      } else {
-        // Якщо отримали повну сторінку, то можливо є ще сторінки
-        setTotalCount(skip + requestsData.length + 1); // +1 щоб показати що є ще сторінки
-        setTotalPages(currentPage + 1);
-      }
-      
-      setPage(currentPage);
-    } catch (error) {
-      console.error('Failed to fetch user requests', error);
-    } finally {
-      setIsLoading(false);
+  // Функція застосування фільтрів
+  const handleApplyFilters = () => {
+    const newFilters: RequestsUserSearchFilters = {};
+    
+    if (formData.requestType !== undefined) {
+      newFilters.requestType = formData.requestType;
     }
+    
+    if (formData.status !== undefined) {
+      newFilters.status = formData.status;
+    }
+    
+    if (formData.createdFrom) {
+      newFilters.createdFrom = new Date(formData.createdFrom).toISOString();
+    }
+    
+    if (formData.createdTo) {
+      newFilters.createdTo = new Date(formData.createdTo).toISOString();
+    }
+    
+    applyFilters(newFilters);
   };
 
-  // Обробник зміни сторінки
-  const handlePageChange = (newPage: number) => {
-    fetchRequests(newPage);
+  const handleClearFilters = () => {
+    setFormData({
+      requestType: undefined,
+      status: undefined,
+      createdFrom: "",
+      createdTo: ""
+    });
+    clearFilters();
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, [filters]);
-
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  // Обробка станів завантаження та помилок
+  if (isError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Історія моїх запитів</h1>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-red-600">Помилка при завантаженні запитів. Спробуйте ще раз.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -142,7 +132,10 @@ export default function UserRequestHistory() {
                     {/* Фільтр за типом запиту */}
                     <div className="space-y-2">
                       <Label htmlFor="request-type-filter" className="text-sm">Тип запиту</Label>
-                      <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
+                      <Select 
+                        value={formData.requestType?.toString() || "all"} 
+                        onValueChange={(value) => handleSelectChange('requestType', value)}
+                      >
                         <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Всі типи" />
                         </SelectTrigger>
@@ -157,7 +150,10 @@ export default function UserRequestHistory() {
                     {/* Фільтр за статусом */}
                     <div className="space-y-2">
                       <Label htmlFor="status-filter" className="text-sm">Статус</Label>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <Select 
+                        value={formData.status?.toString() || "all"} 
+                        onValueChange={(value) => handleSelectChange('status', value)}
+                      >
                         <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Всі статуси" />
                         </SelectTrigger>
@@ -190,8 +186,8 @@ export default function UserRequestHistory() {
                       <Input
                         id="created-from-filter"
                         type="date"
-                        value={createdFromFilter}
-                        onChange={(e) => setCreatedFromFilter(e.target.value)}
+                        value={formData.createdFrom || ""}
+                        onChange={(e) => handleInputChange('createdFrom', e.target.value)}
                         className="h-9 w-full"
                       />
                     </div>
@@ -202,8 +198,8 @@ export default function UserRequestHistory() {
                       <Input
                         id="created-to-filter"
                         type="date"
-                        value={createdToFilter}
-                        onChange={(e) => setCreatedToFilter(e.target.value)}
+                        value={formData.createdTo || ""}
+                        onChange={(e) => handleInputChange('createdTo', e.target.value)}
                         className="h-9 w-full"
                       />
                     </div>
@@ -213,10 +209,10 @@ export default function UserRequestHistory() {
 
               {/* Кнопки управління фільтрами */}
               <div className="flex gap-2 pt-2">
-                <Button onClick={applyFilters} className="flex-1 h-9" disabled={isLoading}>
+                <Button onClick={handleApplyFilters} className="flex-1 h-9" disabled={isLoading}>
                   {isLoading ? "Завантаження..." : "Застосувати"}
                 </Button>
-                <Button variant="outline" onClick={clearFilters} className="h-9">
+                <Button variant="outline" onClick={handleClearFilters} className="h-9">
                   Очистити
                 </Button>
               </div>
@@ -226,25 +222,52 @@ export default function UserRequestHistory() {
 
         {/* Основна область з результатами - справа на великих екранах */}
         <div className="flex-1 min-w-0">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Мої запити</CardTitle>
-              <CardDescription>
-                Сторінка {page} з {totalPages} • Показано {requests.length} з {totalCount} запитів
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RequestsTable
-                requests={requests}
-                page={page}
-                totalPages={totalPages}
-                totalCount={totalCount}
-                isLoading={isLoading}
-                showUserColumn={false}
-                onPageChange={handlePageChange}
-              />
-            </CardContent>
-          </Card>
+          {/* Обробка помилок */}
+          {isError && (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-red-600">Помилка при завантаженні запитів. Спробуйте ще раз.</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Повідомлення про відсутність результатів */}
+          {!isLoading && !isError && requests?.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <Filter className="h-12 w-12 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Результати не знайдено</h3>
+                    <p className="text-muted-foreground">Спробуйте змінити критерії пошуку</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Результати пошуку */}
+          {requests && requests.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Мої запити</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RequestsTable
+                  requests={requests}
+                  isLoading={isLoading}
+                  showUserColumn={false}
+                  pageNumber={currentPage}
+                  pageSize={take}
+                  totalPages={totalPages}
+                  totalRows={totalCount}
+                  pageSizeOptions={[5, 10, 20, 50, 100]}
+                  changePageNumber={setPageNumber}
+                  changePageSize={setPageSize}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

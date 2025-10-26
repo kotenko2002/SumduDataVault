@@ -6,6 +6,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router";
+import { ROUTES } from "~/lib/routeConstants";
 
 interface AuthContextType {
   isAuthorized: boolean;
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const handleTokenRemoved = () => {
         setIsAuthorized(false);
         setUserRole(null);
-        navigate('/login', { replace: true });
+        navigate(`/${ROUTES.auth.login}`, { replace: true });
     };
 
     window.addEventListener("tokenRemoved", handleTokenRemoved);

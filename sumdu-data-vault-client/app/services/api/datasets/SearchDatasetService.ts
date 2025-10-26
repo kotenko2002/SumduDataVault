@@ -18,8 +18,8 @@ export interface SearchDatasetRequest {
   rowCount?: RowCountRange;
   fileSizeBytes?: FileSizeRange;
   metadata?: Record<string, string>;
-  page?: number;
-  pageSize?: number;
+  skip?: number;
+  take?: number;
 }
 
 export interface SearchDatasetItem {
@@ -37,9 +37,6 @@ export interface SearchDatasetItem {
 export interface SearchDatasetResponse {
   datasets: SearchDatasetItem[];
   totalCount: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
 }
 
 export class SearchDatasetService {

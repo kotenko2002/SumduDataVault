@@ -40,22 +40,10 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
                 
                 var totalCount = (int)response.Total;
 
-                var page = request.Page < 1 ? 1 : request.Page;
-                var pageSize = request.PageSize < 1 ? 10 : request.PageSize;
-                if (pageSize > 100) pageSize = 100;
-                var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
-                if (page > totalPages && totalPages > 0)
-                {
-                    page = totalPages;
-                }
-
                 var searchResponse = new SearchDatasetResponse
                 {
                     Datasets = datasets,
-                    TotalCount = totalCount,
-                    Page = page,
-                    PageSize = pageSize,
-                    TotalPages = totalPages
+                    TotalCount = totalCount
                 };
 
                 return Results.Ok(searchResponse);
@@ -180,12 +168,8 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
                 searchRequest.Query = new MatchAllQuery();
             }
 
-            var page = request.Page < 1 ? 1 : request.Page;
-            var pageSize = request.PageSize < 1 ? 10 : request.PageSize;
-            if (pageSize > 100) pageSize = 100;
-
-            searchRequest.From = (page - 1) * pageSize;
-            searchRequest.Size = pageSize;
+            searchRequest.From = request.Skip;
+            searchRequest.Size = request.Take;
 
             return searchRequest;
         }

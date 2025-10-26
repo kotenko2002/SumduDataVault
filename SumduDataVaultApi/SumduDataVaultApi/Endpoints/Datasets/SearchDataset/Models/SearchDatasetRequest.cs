@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
 {
     public sealed record SearchDatasetRequest
@@ -9,8 +11,12 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models
         public RowCountRange? RowCount { get; init; }
         public FileSizeRange? FileSizeBytes { get; init; }
         public Dictionary<string, string> Metadata { get; init; } = new ();
-        public int Page { get; init; } = 1;
-        public int PageSize { get; init; } = 10;
+        
+        [Range(0, int.MaxValue, ErrorMessage = "Skip must be non-negative")]
+        public int Skip { get; init; } = 0;
+        
+        [Range(1, 100, ErrorMessage = "Take must be between 1 and 100")]
+        public int Take { get; init; } = 10;
     }
 
     public sealed record RowCountRange(int? Min, int? Max);
