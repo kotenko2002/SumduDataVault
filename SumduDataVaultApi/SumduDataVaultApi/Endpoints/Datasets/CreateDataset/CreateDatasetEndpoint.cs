@@ -38,16 +38,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
         )
         {
             // Отримуємо ID користувача
-            var userIdResult = httpContext.User.GetUserId();
-            if (userIdResult.IsError)
-            {
-                throw new BusinessException(
-                    "Неавторизований доступ",
-                    HttpStatusCode.Unauthorized,
-                    "Користувач не авторизований"
-                );
-            }
-            var userId = userIdResult.Value;
+            var userId = httpContext.User.GetUserId();
 
             var csvResult = await ProcessCsvFile(request.Csv);
             if (csvResult.IsError)

@@ -50,16 +50,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.Manage.ApproveRequest
             IMapper mapper,
             ILogger<ApproveRequestEndpoint> logger)
         {
-            var adminIdResult = httpContext.User.GetUserId();
-            if (adminIdResult.IsError)
-            {
-                throw new BusinessException(
-                    "Неавторизований доступ",
-                    HttpStatusCode.Unauthorized,
-                    "Користувач не авторизований"
-                );
-            }
-            var adminId = adminIdResult.Value;
+            var adminId = httpContext.User.GetUserId();
 
             var approvalRequest = await context.ApprovalRequest
                 .Include(ar => ar.Dataset)

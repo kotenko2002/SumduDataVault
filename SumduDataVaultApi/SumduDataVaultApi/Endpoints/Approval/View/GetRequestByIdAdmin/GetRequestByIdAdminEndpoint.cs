@@ -48,15 +48,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
             ILogger<GetRequestByIdAdminEndpoint> logger,
             bool isUserFiltered)
         {
-            var userIdResult = httpContext.User.GetUserId();
-            if (userIdResult.IsError)
-            {
-                throw new BusinessException(
-                    "Неавторизований доступ",
-                    HttpStatusCode.Unauthorized,
-                    "Користувач не авторизований"
-                );
-            }
+            var userId = httpContext.User.GetUserId();
 
             var request = await context.ApprovalRequest
                 .Include(r => r.RequestingUser)
@@ -78,7 +70,6 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
             // Перевірка доступу для користувацьких запитів
             if (isUserFiltered)
             {
-                var userId = userIdResult.Value;
                 if (!request.IsOwner(userId))
                 {
                     throw new BusinessException(

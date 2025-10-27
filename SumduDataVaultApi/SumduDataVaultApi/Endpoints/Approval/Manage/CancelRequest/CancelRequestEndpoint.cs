@@ -31,16 +31,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.Manage.CancelRequest
             HttpContext httpContext,
             ILogger<CancelRequestEndpoint> logger)
         {
-            var userIdResult = httpContext.User.GetUserId();
-            if (userIdResult.IsError)
-            {
-                throw new BusinessException(
-                    "Неавторизований доступ",
-                    HttpStatusCode.Unauthorized,
-                    "Користувач не авторизований"
-                );
-            }
-            var userId = userIdResult.Value;
+            var userId = httpContext.User.GetUserId();
 
             var approvalRequest = await context.ApprovalRequest.FindAsync(id);
             if (approvalRequest == null)

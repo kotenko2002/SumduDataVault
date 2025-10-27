@@ -92,16 +92,7 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
             // Фільтрація по UserId з JWT (тільки для користувацьких запитів)
             if (isUserFiltered)
             {
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    throw new BusinessException(
-                        "Неавторизований доступ",
-                        HttpStatusCode.Unauthorized,
-                        "Користувач не авторизований"
-                    );
-                }
-                var userId = userIdResult.Value;
+                var userId = httpContext.User.GetUserId();
                 query = query.Where(r => r.RequestingUserId == userId);
             }
 

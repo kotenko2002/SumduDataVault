@@ -41,18 +41,9 @@ namespace SumduDataVaultApi.Endpoints.Datasets.DownloadDataset
                 );
             }
 
-            var userIdResult = httpContext.User.GetUserId();
-            if (userIdResult.IsError)
-            {
-                throw new BusinessException(
-                    "Неавторизований доступ",
-                    HttpStatusCode.Unauthorized,
-                    "Користувач не авторизований"
-                );
-            }
-            var userId = userIdResult.Value;
+            var userId = httpContext.User.GetUserId();
 
-            var isAdmin = httpContext.User.IsAdmin() is { IsError: false, Value: true };
+            var isAdmin = httpContext.User.IsAdmin();
             if (!isAdmin)
             {
                 var approvedRequest = await context.ApprovalRequest

@@ -29,15 +29,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
             HttpContext httpContext,
             ILogger<GetDatasetByIdEndpoint> logger)
         {
-            var userIdResult = httpContext.User.GetUserId();
-            if (userIdResult.IsError)
-            {
-                throw new BusinessException(
-                    "Неавторизований доступ",
-                    HttpStatusCode.Unauthorized,
-                    "Користувач не авторизований"
-                );
-            }
+            var userId = httpContext.User.GetUserId();
 
             var dataset = await context.Set<Dataset>()
                 .AsNoTracking()
@@ -54,7 +46,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
             }
 
             var response = mapper.Map<GetDatasetByIdResponse>(dataset);
-            var accessStatus = await DetermineAccessStatus(id, userIdResult.Value, httpContext, context);
+            var accessStatus = await DetermineAccessStatus(id, userId, httpContext, context);
 
             return Results.Ok(response with { AccessStatus = accessStatus });
         }
@@ -65,7 +57,7 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
             HttpContext httpContext,
             AppDbContext context)
         {
-            var isAdmin = httpContext.User.IsAdmin() is { IsError: false, Value: true };
+            var isAdmin = httpContext.User.IsAdmin();
             if (isAdmin)
             {
                 return AccessStatus.Approved;
