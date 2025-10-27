@@ -4,8 +4,10 @@ using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Enums;
 using SumduDataVaultApi.Endpoints.Approval.Manage.RejectRequest.Models;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Services.Approvals;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Approval.Manage.RejectRequest
 {
@@ -34,48 +36,51 @@ namespace SumduDataVaultApi.Endpoints.Approval.Manage.RejectRequest
             HttpContext httpContext,
             ILogger<RejectRequestEndpoint> logger)
         {
-            try
+            var adminIdResult = httpContext.User.GetUserId();
+            if (adminIdResult.IsError)
             {
-                var adminIdResult = httpContext.User.GetUserId();
-                if (adminIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-                var adminId = adminIdResult.Value;
-
-                var approvalRequest = await context.ApprovalRequest.FindAsync(id);
-                if (approvalRequest == null)
-                {
-                    return Results.NotFound();
-                }
-
-                var success = await approvalService.RejectRequestAsync(approvalRequest, adminId, request.AdminComments);
-                if (!success)
-                {
-                    return Results.BadRequest("Неможливо відхилити запит у поточному стані");
-                }
-
-                var history = new RequestHistory
-                {
-                    FromState = RequestStatus.Pending,
-                    ToState = RequestStatus.Rejected,
-                    Comments = request.AdminComments,
-                    Timestamp = DateTime.UtcNow,
-                    ApprovalRequestId = id,
-                    ActionedByUserId = adminId
-                };
-
-                context.RequestHistory.Add(history);
-                await context.SaveChangesAsync();
-
-
-                return Results.Ok();
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
             }
-            catch (Exception ex)
+            var adminId = adminIdResult.Value;
+
+            var approvalRequest = await context.ApprovalRequest.FindAsync(id);
+            if (approvalRequest == null)
             {
-                logger.LogError(ex, "Помилка при відхиленні запиту {RequestId}", id);
-                return Results.Problem("Сталася помилка при відхиленні запиту");
+                throw new BusinessException(
+                    "Ресурс не знайдено",
+                    HttpStatusCode.NotFound,
+                    "Запит на схвалення не знайдено"
+                );
             }
+
+            var success = await approvalService.RejectRequestAsync(approvalRequest, adminId, request.AdminComments);
+            if (!success)
+            {
+                throw new BusinessException(
+                    "Неможливо виконати операцію",
+                    HttpStatusCode.BadRequest,
+                    "Неможливо відхилити запит у поточному стані"
+                );
+            }
+
+            var history = new RequestHistory
+            {
+                FromState = RequestStatus.Pending,
+                ToState = RequestStatus.Rejected,
+                Comments = request.AdminComments,
+                Timestamp = DateTime.UtcNow,
+                ApprovalRequestId = id,
+                ActionedByUserId = adminId
+            };
+
+            context.RequestHistory.Add(history);
+            await context.SaveChangesAsync();
+
+            return Results.Ok();
         }
     }
 }

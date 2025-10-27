@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Endpoints.Users.SearchUsers.Models;
+using SumduDataVaultApi.Infrastructure.Exceptions;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Users.SearchUsers
 {
@@ -21,29 +23,30 @@ namespace SumduDataVaultApi.Endpoints.Users.SearchUsers
             AppDbContext context,
             ILogger<SearchUsersEndpoint> logger)
         {
-            try
+            if (string.IsNullOrWhiteSpace(request.Search))
             {
-                var lowerSearch = request.Search.ToLower();
-                var query = context.Users
-                    .AsNoTracking()
-                    .Where(u => 
-                        EF.Functions.Like((u.LastName + " " + u.FirstName + " " + u.MiddleName).ToLower(), $"%{lowerSearch}%"));
-
-                var fullNames = await query
-                    .Select(u => u.LastName + " " + u.FirstName + " " + u.MiddleName)
-                    .Distinct()
-                    .Take(10)
-                    .ToListAsync();
-
-                var response = new SearchUsersResponse(fullNames);
-
-                return Results.Ok(response);
+                throw new BusinessException(
+                    "Невірний запит",
+                    HttpStatusCode.BadRequest,
+                    "Поле пошуку не може бути порожнім"
+                );
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error occurred while searching users");
-                return Results.Problem("An error occurred while processing the request");
-            }
+
+            var lowerSearch = request.Search.ToLower();
+            var query = context.Users
+                .AsNoTracking()
+                .Where(u => 
+                    EF.Functions.Like((u.LastName + " " + u.FirstName + " " + u.MiddleName).ToLower(), $"%{lowerSearch}%"));
+
+            var fullNames = await query
+                .Select(u => u.LastName + " " + u.FirstName + " " + u.MiddleName)
+                .Distinct()
+                .Take(10)
+                .ToListAsync();
+
+            var response = new SearchUsersResponse(fullNames);
+
+            return Results.Ok(response);
         }
     }
 }

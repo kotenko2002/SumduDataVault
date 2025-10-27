@@ -6,6 +6,8 @@ using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.DataAccess.Enums;
 using SumduDataVaultApi.Endpoints.Datasets.GetDatasetById.Models;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
 {
@@ -27,34 +29,34 @@ namespace SumduDataVaultApi.Endpoints.Datasets.GetDatasetById
             HttpContext httpContext,
             ILogger<GetDatasetByIdEndpoint> logger)
         {
-            try
+            var userIdResult = httpContext.User.GetUserId();
+            if (userIdResult.IsError)
             {
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-
-                var dataset = await context.Set<Dataset>()
-                    .AsNoTracking()
-                    .Include(x => x.MetadataItems)
-                    .FirstOrDefaultAsync(x => x.Id == id);
-
-                if (dataset is null)
-                {
-                    return Results.NotFound();
-                }
-
-                var response = mapper.Map<GetDatasetByIdResponse>(dataset);
-                var accessStatus = await DetermineAccessStatus(id, userIdResult.Value, httpContext, context);
-
-                return Results.Ok(response with { AccessStatus = accessStatus });
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
             }
-            catch (Exception ex)
+
+            var dataset = await context.Set<Dataset>()
+                .AsNoTracking()
+                .Include(x => x.MetadataItems)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (dataset is null)
             {
-                logger.LogError(ex, "Error retrieving dataset {DatasetId}", id);
-                return Results.Problem("An error occurred while retrieving the dataset");
+                throw new BusinessException(
+                    "Ресурс не знайдено",
+                    HttpStatusCode.NotFound,
+                    "Датасет не знайдено"
+                );
             }
+
+            var response = mapper.Map<GetDatasetByIdResponse>(dataset);
+            var accessStatus = await DetermineAccessStatus(id, userIdResult.Value, httpContext, context);
+
+            return Results.Ok(response with { AccessStatus = accessStatus });
         }
 
         private static async Task<AccessStatus> DetermineAccessStatus(

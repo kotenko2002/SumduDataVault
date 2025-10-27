@@ -4,6 +4,8 @@ using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.DataAccess.Enums;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.DownloadDataset
 {
@@ -26,51 +28,55 @@ namespace SumduDataVaultApi.Endpoints.Datasets.DownloadDataset
             HttpContext httpContext,
             ILogger<DownloadDatasetEndpoint> logger)
         {
-            try
+            var dataset = await context.Set<Dataset>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (dataset is null)
             {
-                var dataset = await context.Set<Dataset>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.Id == id);
-
-                if (dataset is null)
-                {
-                    return Results.NotFound();
-                }
-
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-                var userId = userIdResult.Value;
-
-                var isAdmin = httpContext.User.IsAdmin() is { IsError: false, Value: true };
-                if (!isAdmin)
-                {
-                    var approvedRequest = await context.ApprovalRequest
-                        .FirstOrDefaultAsync(r => 
-                            r.RequestingUserId == userId && 
-                            r.DatasetId == id && 
-                            r.RequestType == RequestType.FullDataAccess && 
-                            r.Status == RequestStatus.Approved);
-
-                    if (approvedRequest == null)
-                    {
-                        return Results.Forbid();
-                    }
-                }
-
-                return Results.File(
-                    dataset.CsvContent,
-                    "text/csv",
-                    dataset.FileName
+                throw new BusinessException(
+                    "Ресурс не знайдено",
+                    HttpStatusCode.NotFound,
+                    "Датасет не знайдено"
                 );
             }
-            catch (Exception ex)
+
+            var userIdResult = httpContext.User.GetUserId();
+            if (userIdResult.IsError)
             {
-                logger.LogError(ex, "Помилка при завантаженні датасету {DatasetId}", id);
-                return Results.Problem("Сталася помилка при завантаженні датасету");
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
             }
+            var userId = userIdResult.Value;
+
+            var isAdmin = httpContext.User.IsAdmin() is { IsError: false, Value: true };
+            if (!isAdmin)
+            {
+                var approvedRequest = await context.ApprovalRequest
+                    .FirstOrDefaultAsync(r => 
+                        r.RequestingUserId == userId && 
+                        r.DatasetId == id && 
+                        r.RequestType == RequestType.FullDataAccess && 
+                        r.Status == RequestStatus.Approved);
+
+                if (approvedRequest == null)
+                {
+                    throw new BusinessException(
+                        "Доступ заборонено",
+                        HttpStatusCode.Forbidden,
+                        "У вас немає дозволу на завантаження цього датасету"
+                    );
+                }
+            }
+
+            return Results.File(
+                dataset.CsvContent,
+                "text/csv",
+                dataset.FileName
+            );
         }
     }
 }

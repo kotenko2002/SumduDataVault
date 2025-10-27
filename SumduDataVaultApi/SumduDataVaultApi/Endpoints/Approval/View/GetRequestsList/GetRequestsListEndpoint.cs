@@ -5,8 +5,10 @@ using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList.Models;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using MapsterMapper;
 using SumduDataVaultApi.Dtos;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
 {
@@ -81,80 +83,76 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestsList
             ILogger<GetRequestsListEndpoint> logger,
             bool isUserFiltered)
         {
-            try
+            var query = context.ApprovalRequest
+                .Include(r => r.Admin)
+                .Include(r => r.RequestingUser)
+                .Include(r => r.Dataset)
+                .AsQueryable();
+
+            // Фільтрація по UserId з JWT (тільки для користувацьких запитів)
+            if (isUserFiltered)
             {
-                var query = context.ApprovalRequest
-                    .Include(r => r.Admin)
-                    .Include(r => r.RequestingUser)
-                    .Include(r => r.Dataset)
-                    .AsQueryable();
-
-                // Фільтрація по UserId з JWT (тільки для користувацьких запитів)
-                if (isUserFiltered)
+                var userIdResult = httpContext.User.GetUserId();
+                if (userIdResult.IsError)
                 {
-                    var userIdResult = httpContext.User.GetUserId();
-                    if (userIdResult.IsError)
-                    {
-                        return Results.Unauthorized();
-                    }
-                    var userId = userIdResult.Value;
-                    query = query.Where(r => r.RequestingUserId == userId);
+                    throw new BusinessException(
+                        "Неавторизований доступ",
+                        HttpStatusCode.Unauthorized,
+                        "Користувач не авторизований"
+                    );
                 }
-
-                // Фільтр за типом запиту
-                if (filters.RequestType.HasValue)
-                {
-                    query = query.Where(r => r.RequestType == filters.RequestType.Value);
-                }
-
-                // Фільтр за статусом запиту
-                if (filters.Status.HasValue)
-                {
-                    query = query.Where(r => r.Status == filters.Status.Value);
-                }
-
-                // Фільтр за датою створення (від)
-                if (filters.CreatedFrom.HasValue)
-                {
-                    query = query.Where(r => r.RequestedAt >= filters.CreatedFrom.Value);
-                }
-
-                // Фільтр за датою створення (до)
-                if (filters.CreatedTo.HasValue)
-                {
-                    query = query.Where(r => r.RequestedAt <= filters.CreatedTo.Value);
-                }
-
-                // Фільтр за ПІБ користувача (тільки для адміністраторських запитів)
-                if (!isUserFiltered && !string.IsNullOrEmpty(filters.UserFullName))
-                {
-                    query = query.Where(r => 
-                        (r.RequestingUser.LastName + " " + r.RequestingUser.FirstName + " " + r.RequestingUser.MiddleName)
-                        .Contains(filters.UserFullName));
-                }
-
-                // Підрахунок загальної кількості записів (без skip/take)
-                var total = await query.CountAsync();
-
-                var requests = await query
-                    .OrderByDescending(r => r.RequestedAt)
-                    .Skip(filters.Skip ?? 0)
-                    .Take(filters.Take ?? 10)
-                    .ToListAsync();
-                
-                var response = new GetRequestsListResponse
-                {
-                    Requests = requests.Select(r => mapper.Map<ApprovalRequestDto>((r, true))).ToList(),
-                    Total = total
-                };
-
-                return Results.Ok(response);
+                var userId = userIdResult.Value;
+                query = query.Where(r => r.RequestingUserId == userId);
             }
-            catch (Exception ex)
+
+            // Фільтр за типом запиту
+            if (filters.RequestType.HasValue)
             {
-                logger.LogError(ex, "Помилка при отриманні списку запитів");
-                return Results.Problem("Сталася помилка при отриманні списку запитів");
+                query = query.Where(r => r.RequestType == filters.RequestType.Value);
             }
+
+            // Фільтр за статусом запиту
+            if (filters.Status.HasValue)
+            {
+                query = query.Where(r => r.Status == filters.Status.Value);
+            }
+
+            // Фільтр за датою створення (від)
+            if (filters.CreatedFrom.HasValue)
+            {
+                query = query.Where(r => r.RequestedAt >= filters.CreatedFrom.Value);
+            }
+
+            // Фільтр за датою створення (до)
+            if (filters.CreatedTo.HasValue)
+            {
+                query = query.Where(r => r.RequestedAt <= filters.CreatedTo.Value);
+            }
+
+            // Фільтр за ПІБ користувача (тільки для адміністраторських запитів)
+            if (!isUserFiltered && !string.IsNullOrEmpty(filters.UserFullName))
+            {
+                query = query.Where(r => 
+                    (r.RequestingUser.LastName + " " + r.RequestingUser.FirstName + " " + r.RequestingUser.MiddleName)
+                    .Contains(filters.UserFullName));
+            }
+
+            // Підрахунок загальної кількості записів (без skip/take)
+            var total = await query.CountAsync();
+
+            var requests = await query
+                .OrderByDescending(r => r.RequestedAt)
+                .Skip(filters.Skip ?? 0)
+                .Take(filters.Take ?? 10)
+                .ToListAsync();
+            
+            var response = new GetRequestsListResponse
+            {
+                Requests = requests.Select(r => mapper.Map<ApprovalRequestDto>((r, true))).ToList(),
+                Total = total
+            };
+
+            return Results.Ok(response);
         }
     }
 }

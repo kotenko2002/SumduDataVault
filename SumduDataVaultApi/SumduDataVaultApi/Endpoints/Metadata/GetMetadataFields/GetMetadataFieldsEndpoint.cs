@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.Endpoints.Metadata.GetMetadataFields.Models;
+using SumduDataVaultApi.Infrastructure.Exceptions;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Metadata.GetMetadataFields
 {
@@ -19,35 +21,27 @@ namespace SumduDataVaultApi.Endpoints.Metadata.GetMetadataFields
             AppDbContext context,
             ILogger<GetMetadataFieldsEndpoint> logger)
         {
-            try
+            var query = context.DatasetMetadata
+                .AsNoTracking()
+                .Select(x => x.Field)
+                .Distinct();
+
+            if (!string.IsNullOrWhiteSpace(request.Search))
             {
-                var query = context.DatasetMetadata
-                    .AsNoTracking()
-                    .Select(x => x.Field)
-                    .Distinct();
-
-                if (!string.IsNullOrWhiteSpace(request.Search))
-                {
-                    var lowerSearch = request.Search.ToLower();
-                    query = query.Where(x => EF.Functions.Like(x.ToLower(), $"%{lowerSearch}%"));
-                }
-
-                var fields = await query
-                    .Take(10)
-                    .ToListAsync();
-
-                var response = new GetMetadataFieldsResponse
-                {
-                    Fields = fields
-                };
-
-                return Results.Ok(response);
+                var lowerSearch = request.Search.ToLower();
+                query = query.Where(x => EF.Functions.Like(x.ToLower(), $"%{lowerSearch}%"));
             }
-            catch (Exception ex)
+
+            var fields = await query
+                .Take(10)
+                .ToListAsync();
+
+            var response = new GetMetadataFieldsResponse
             {
-                logger.LogError(ex, "Error occurred while getting metadata fields");
-                return Results.Problem("An error occurred while processing the request");
-            }
+                Fields = fields
+            };
+
+            return Results.Ok(response);
         }
     }
 }

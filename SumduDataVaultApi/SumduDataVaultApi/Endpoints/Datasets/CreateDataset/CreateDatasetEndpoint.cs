@@ -8,7 +8,9 @@ using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.DataAccess.Enums;
 using SumduDataVaultApi.Endpoints.Datasets.CreateDataset.Models;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using SumduDataVaultApi.Services.Approvals;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Error = ErrorOr.Error;
@@ -35,53 +37,58 @@ namespace SumduDataVaultApi.Endpoints.Datasets.CreateDataset
             IMapper mapper
         )
         {
-            try
+            // Отримуємо ID користувача
+            var userIdResult = httpContext.User.GetUserId();
+            if (userIdResult.IsError)
             {
-                // Отримуємо ID користувача
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-                var userId = userIdResult.Value;
-
-                var csvResult = await ProcessCsvFile(request.Csv);
-                if (csvResult.IsError)
-                {
-                    return Results.BadRequest(csvResult.Errors);
-                }
-
-                var metadataResult = ProcessMetadata(request.MetadataJson);
-                if (metadataResult.IsError)
-                {
-                    return Results.BadRequest(metadataResult.Errors);
-                }
-
-                var dataset = mapper.Map<Dataset>((request, csvResult.Value, metadataResult.Value));
-                
-                context.Dataset.Add(dataset);
-                await context.SaveChangesAsync();
-                
-                // Create metadata items from the JSON metadata after dataset is saved
-                var metadataItems = CreateMetadataItems(dataset, metadataResult.Value);
-                context.DatasetMetadata.AddRange(metadataItems);
-                await context.SaveChangesAsync();
-
-                // Створюємо запит на завантаження датасету
-                var approvalRequest = await approvalService.CreateRequestAsync(
-                    userId, 
-                    RequestType.NewDatasetUpload, 
-                    request.UserJustification,
-                    dataset.Id);
-
-
-                return Results.Created($"/datasets/{dataset.Id}", new CreateDatasetResponse(dataset.Id, approvalRequest.Id));
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
             }
-            catch (Exception e)
+            var userId = userIdResult.Value;
+
+            var csvResult = await ProcessCsvFile(request.Csv);
+            if (csvResult.IsError)
             {
-                logger.LogError(e, "Помилка при створенні датасету");
-                return Results.Problem("Сталася помилка при створенні датасету");
+                var errors = csvResult.Errors.Select(e => e.Description).ToList();
+                throw new BusinessException(
+                    "Помилка обробки CSV файлу",
+                    HttpStatusCode.BadRequest,
+                    errors
+                );
             }
+
+            var metadataResult = ProcessMetadata(request.MetadataJson);
+            if (metadataResult.IsError)
+            {
+                var errors = metadataResult.Errors.Select(e => e.Description).ToList();
+                throw new BusinessException(
+                    "Помилка обробки метаданих",
+                    HttpStatusCode.BadRequest,
+                    errors
+                );
+            }
+
+            var dataset = mapper.Map<Dataset>((request, csvResult.Value, metadataResult.Value));
+            
+            context.Dataset.Add(dataset);
+            await context.SaveChangesAsync();
+            
+            // Create metadata items from the JSON metadata after dataset is saved
+            var metadataItems = CreateMetadataItems(dataset, metadataResult.Value);
+            context.DatasetMetadata.AddRange(metadataItems);
+            await context.SaveChangesAsync();
+
+            // Створюємо запит на завантаження датасету
+            var approvalRequest = await approvalService.CreateRequestAsync(
+                userId, 
+                RequestType.NewDatasetUpload, 
+                request.UserJustification,
+                dataset.Id);
+
+            return Results.Created($"/datasets/{dataset.Id}", new CreateDatasetResponse(dataset.Id, approvalRequest.Id));
         }
 
         private static async Task<ErrorOr<CsvProcessingResult>> ProcessCsvFile(IFormFile csvFile)

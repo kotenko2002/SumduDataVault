@@ -5,7 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Endpoints.Auth.Login.Models;
 using SumduDataVaultApi.Infrastructure.Configs;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 
@@ -28,33 +30,29 @@ namespace SumduDataVaultApi.Endpoints.Auth.Login
             ILogger<LoginEndpoint> logger
         )
         {
-            try
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
             {
-                var user = await userManager.FindByEmailAsync(request.Email);
-                if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
-                {
-                    return Results.BadRequest("Неправильний email або пароль");
-                }
-
-                var userRoles = await userManager.GetRolesAsync(user);
-
-                var authClaims = new List<Claim>
-                {
-                    new("userId", user.Id.ToString()),
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
-                authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-                JwtSecurityToken accessToken = GenerateAccessToken(authClaims, jwtOptions);
-
-                return Results.Ok(new JwtSecurityTokenHandler().WriteToken(accessToken));
+                throw new BusinessException(
+                    "Невдалий вхід",
+                    HttpStatusCode.Unauthorized,
+                    "Неправильний email або пароль"
+                );
             }
-            catch (Exception ex)
+
+            var userRoles = await userManager.GetRolesAsync(user);
+
+            var authClaims = new List<Claim>
             {
-                logger.LogError(ex, "Error occurred during login for email: {Email}", request.Email);
-                return Results.Problem("Сталася помилка під час входу");
-            }
+                new("userId", user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
+            authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+            JwtSecurityToken accessToken = GenerateAccessToken(authClaims, jwtOptions);
+
+            return Results.Ok(new JwtSecurityTokenHandler().WriteToken(accessToken));
         }
 
         private static JwtSecurityToken GenerateAccessToken(List<Claim> authClaims, IOptions<JwtConfig> jwtOptions)

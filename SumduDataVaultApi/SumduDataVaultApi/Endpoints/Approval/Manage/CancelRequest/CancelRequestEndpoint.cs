@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Enums;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using SumduDataVaultApi.Services.Approvals;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Approval.Manage.CancelRequest
 {
@@ -29,48 +31,51 @@ namespace SumduDataVaultApi.Endpoints.Approval.Manage.CancelRequest
             HttpContext httpContext,
             ILogger<CancelRequestEndpoint> logger)
         {
-            try
+            var userIdResult = httpContext.User.GetUserId();
+            if (userIdResult.IsError)
             {
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-                var userId = userIdResult.Value;
-
-                var approvalRequest = await context.ApprovalRequest.FindAsync(id);
-                if (approvalRequest == null)
-                {
-                    return Results.NotFound();
-                }
-
-                var success = await approvalService.CancelRequestAsync(approvalRequest, userId);
-                if (!success)
-                {
-                    return Results.BadRequest("Неможливо скасувати запит у поточному стані");
-                }
-
-                var history = new DataAccess.Entities.RequestHistory
-                {
-                    FromState = RequestStatus.Pending,
-                    ToState = RequestStatus.Canceled,
-                    Comments = "Запит скасовано користувачем",
-                    Timestamp = DateTime.UtcNow,
-                    ApprovalRequestId = id,
-                    ActionedByUserId = userId
-                };
-
-                context.RequestHistory.Add(history);
-                await context.SaveChangesAsync();
-
-
-                return Results.Ok();
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
             }
-            catch (Exception ex)
+            var userId = userIdResult.Value;
+
+            var approvalRequest = await context.ApprovalRequest.FindAsync(id);
+            if (approvalRequest == null)
             {
-                logger.LogError(ex, "Помилка при скасуванні запиту {RequestId}", id);
-                return Results.Problem("Сталася помилка при скасуванні запиту");
+                throw new BusinessException(
+                    "Ресурс не знайдено",
+                    HttpStatusCode.NotFound,
+                    "Запит на схвалення не знайдено"
+                );
             }
+
+            var success = await approvalService.CancelRequestAsync(approvalRequest, userId);
+            if (!success)
+            {
+                throw new BusinessException(
+                    "Неможливо виконати операцію",
+                    HttpStatusCode.BadRequest,
+                    "Неможливо скасувати запит у поточному стані"
+                );
+            }
+
+            var history = new DataAccess.Entities.RequestHistory
+            {
+                FromState = RequestStatus.Pending,
+                ToState = RequestStatus.Canceled,
+                Comments = "Запит скасовано користувачем",
+                Timestamp = DateTime.UtcNow,
+                ApprovalRequestId = id,
+                ActionedByUserId = userId
+            };
+
+            context.RequestHistory.Add(history);
+            await context.SaveChangesAsync();
+
+            return Results.Ok();
         }
     }
 }

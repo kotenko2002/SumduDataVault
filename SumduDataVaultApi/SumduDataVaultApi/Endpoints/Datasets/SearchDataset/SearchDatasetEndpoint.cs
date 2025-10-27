@@ -4,7 +4,9 @@ using OpenSearch.Client;
 using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Endpoints.Datasets.SearchDataset.Models;
 using SumduDataVaultApi.Infrastructure.Configs;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using Mapster;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
 {
@@ -25,34 +27,30 @@ namespace SumduDataVaultApi.Endpoints.Datasets.SearchDataset
             IOptions<OpenSearchConfig> openSearchConfig,
             ILogger<SearchDatasetEndpoint> logger)
         {
-            try
+            var searchRequest = BuildSearchRequest(request, openSearchConfig.Value.DefaultIndex);
+            var response = await openSearch.SearchAsync<DatasetIndexDoc>(searchRequest);
+
+            if (!response.IsValid)
             {
-                var searchRequest = BuildSearchRequest(request, openSearchConfig.Value.DefaultIndex);
-                var response = await openSearch.SearchAsync<DatasetIndexDoc>(searchRequest);
-
-                if (!response.IsValid)
-                {
-                    logger.LogError("OpenSearch search failed: {Error}", response.DebugInformation);
-                    return Results.Problem("Search failed", statusCode: StatusCodes.Status502BadGateway);
-                }
-
-                var datasets = response.Documents.Adapt<List<SearchDatasetItem>>();
-                
-                var totalCount = (int)response.Total;
-
-                var searchResponse = new SearchDatasetResponse
-                {
-                    Datasets = datasets,
-                    TotalCount = totalCount
-                };
-
-                return Results.Ok(searchResponse);
+                logger.LogError("OpenSearch search failed: {Error}", response.DebugInformation);
+                throw new BusinessException(
+                    "Помилка пошуку",
+                    HttpStatusCode.BadGateway,
+                    "Не вдалося виконати пошук у базі даних"
+                );
             }
-            catch (Exception ex)
+
+            var datasets = response.Documents.Adapt<List<SearchDatasetItem>>();
+            
+            var totalCount = (int)response.Total;
+
+            var searchResponse = new SearchDatasetResponse
             {
-                logger.LogError(ex, "Exception occurred during dataset search");
-                return Results.Problem("Internal server error during search", statusCode: StatusCodes.Status500InternalServerError);
-            }
+                Datasets = datasets,
+                TotalCount = totalCount
+            };
+
+            return Results.Ok(searchResponse);
         }
 
         private static SearchRequest<DatasetIndexDoc> BuildSearchRequest(SearchDatasetRequest request, string indexName)

@@ -4,6 +4,7 @@ using OpenSearch.Client;
 using OpenSearch.Net;
 using SumduDataVaultApi.Infrastructure.Extensions;
 using SumduDataVaultApi.Infrastructure.Configs;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 
 namespace SumduDataVaultApi
 {
@@ -87,6 +88,7 @@ namespace SumduDataVaultApi
                 }
             });
 
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
             app.UseCors("AllowFrontend");
             app.UseHttpsRedirection();
 

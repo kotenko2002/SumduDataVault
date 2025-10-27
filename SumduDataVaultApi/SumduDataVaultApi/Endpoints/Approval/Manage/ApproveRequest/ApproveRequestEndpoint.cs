@@ -10,11 +10,13 @@ using SumduDataVaultApi.DataAccess.Enums;
 using SumduDataVaultApi.Endpoints.Approval.Manage.ApproveRequest.Models;
 using SumduDataVaultApi.Infrastructure.Configs;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Services.Approvals;
 using SumduDataVaultApi.Dtos;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using Error = ErrorOr.Error;
 using Result = ErrorOr.Result;
 
@@ -48,68 +50,71 @@ namespace SumduDataVaultApi.Endpoints.Approval.Manage.ApproveRequest
             IMapper mapper,
             ILogger<ApproveRequestEndpoint> logger)
         {
-            try
+            var adminIdResult = httpContext.User.GetUserId();
+            if (adminIdResult.IsError)
             {
-                var adminIdResult = httpContext.User.GetUserId();
-                if (adminIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-                var adminId = adminIdResult.Value;
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
+            }
+            var adminId = adminIdResult.Value;
 
-                var approvalRequest = await context.ApprovalRequest
-                    .Include(ar => ar.Dataset)
-                    .FirstOrDefaultAsync(ar => ar.Id == id);
+            var approvalRequest = await context.ApprovalRequest
+                .Include(ar => ar.Dataset)
+                .FirstOrDefaultAsync(ar => ar.Id == id);
+                
+            if (approvalRequest == null)
+            {
+                throw new BusinessException(
+                    "Ресурс не знайдено",
+                    HttpStatusCode.NotFound,
+                    "Запит на схвалення не знайдено"
+                );
+            }
+
+            var success = await approvalService.ApproveRequestAsync(approvalRequest, adminId, request.AdminComments);
+            if (!success)
+            {
+                throw new BusinessException(
+                    "Неможливо виконати операцію",
+                    HttpStatusCode.BadRequest,
+                    "Неможливо схвалити запит у поточному стані"
+                );
+            }
+
+            var history = new RequestHistory
+            {
+                FromState = RequestStatus.Pending,
+                ToState = RequestStatus.Approved,
+                Comments = request.AdminComments,
+                Timestamp = DateTime.UtcNow,
+                ApprovalRequestId = id,
+                ActionedByUserId = adminId
+            };
+
+            context.RequestHistory.Add(history);
+            await context.SaveChangesAsync();
+
+            if (approvalRequest is { RequestType: RequestType.NewDatasetUpload, Dataset: not null })
+            {
+                var indexingResult = await IndexDatasetInOpenSearch(
+                    approvalRequest.Dataset, 
+                    openSearch, 
+                    openSearchConfig.Value, 
+                    mapper, 
+                    logger
+                );
                     
-                if (approvalRequest == null)
+                if (indexingResult.IsError)
                 {
-                    return Results.NotFound();
+                    logger.LogError("Помилка при індексуванні датасету {DatasetId} після схвалення запиту {RequestId}", 
+                        approvalRequest.Dataset.Id, id);
                 }
-
-                var success = await approvalService.ApproveRequestAsync(approvalRequest, adminId, request.AdminComments);
-                if (!success)
-                {
-                    return Results.BadRequest("Неможливо схвалити запит у поточному стані");
-                }
-
-                var history = new RequestHistory
-                {
-                    FromState = RequestStatus.Pending,
-                    ToState = RequestStatus.Approved,
-                    Comments = request.AdminComments,
-                    Timestamp = DateTime.UtcNow,
-                    ApprovalRequestId = id,
-                    ActionedByUserId = adminId
-                };
-
-                context.RequestHistory.Add(history);
-                await context.SaveChangesAsync();
-
-                if (approvalRequest is { RequestType: RequestType.NewDatasetUpload, Dataset: not null })
-                {
-                    var indexingResult = await IndexDatasetInOpenSearch(
-                        approvalRequest.Dataset, 
-                        openSearch, 
-                        openSearchConfig.Value, 
-                        mapper, 
-                        logger
-                    );
-                        
-                    if (indexingResult.IsError)
-                    {
-                        logger.LogError("Помилка при індексуванні датасету {DatasetId} після схвалення запиту {RequestId}", 
-                            approvalRequest.Dataset.Id, id);
-                    }
-                }
-
-
-                return Results.Ok();
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Помилка при схваленні запиту {RequestId}", id);
-                return Results.Problem("Сталася помилка при схваленні запиту");
-            }
+
+            return Results.Ok();
         }
 
         private static async Task<ErrorOr<Success>> IndexDatasetInOpenSearch(

@@ -5,7 +5,9 @@ using SumduDataVaultApi.DataAccess;
 using SumduDataVaultApi.DataAccess.Entities;
 using SumduDataVaultApi.Dtos;
 using SumduDataVaultApi.Infrastructure.Extensions;
+using SumduDataVaultApi.Infrastructure.Exceptions;
 using MapsterMapper;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
 {
@@ -46,49 +48,50 @@ namespace SumduDataVaultApi.Endpoints.Approval.View.GetRequestByIdAdmin
             ILogger<GetRequestByIdAdminEndpoint> logger,
             bool isUserFiltered)
         {
-            try
+            var userIdResult = httpContext.User.GetUserId();
+            if (userIdResult.IsError)
             {
-                var userIdResult = httpContext.User.GetUserId();
-                if (userIdResult.IsError)
-                {
-                    return Results.Unauthorized();
-                }
-
-                var request = await context.ApprovalRequest
-                    .Include(r => r.RequestingUser)
-                    .Include(r => r.Admin)
-                    .Include(r => r.Dataset)
-                    .Include(r => r.History)
-                        .ThenInclude(h => h.ActionedByUser)
-                    .FirstOrDefaultAsync(r => r.Id == id);
-
-                if (request == null)
-                {
-                    return Results.NotFound();
-                }
-
-                // Перевірка доступу для користувацьких запитів
-                if (isUserFiltered)
-                {
-                    var userId = userIdResult.Value;
-                    if (!request.IsOwner(userId))
-                    {
-                        return Results.Forbid();
-                    }
-                }
-
-                var response = mapper.Map<ApprovalRequestDto>((request, false));
-
-                return Results.Ok(response);
+                throw new BusinessException(
+                    "Неавторизований доступ",
+                    HttpStatusCode.Unauthorized,
+                    "Користувач не авторизований"
+                );
             }
-            catch (Exception ex)
+
+            var request = await context.ApprovalRequest
+                .Include(r => r.RequestingUser)
+                .Include(r => r.Admin)
+                .Include(r => r.Dataset)
+                .Include(r => r.History)
+                    .ThenInclude(h => h.ActionedByUser)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (request == null)
             {
-                var logMessage = isUserFiltered 
-                    ? "Помилка при отриманні запиту {RequestId}" 
-                    : "Помилка при отриманні запиту {RequestId} адміністратором";
-                logger.LogError(ex, logMessage, id);
-                return Results.Problem("Сталася помилка при отриманні запиту");
+                throw new BusinessException(
+                    "Ресурс не знайдено",
+                    HttpStatusCode.NotFound,
+                    "Запит на схвалення не знайдено"
+                );
             }
+
+            // Перевірка доступу для користувацьких запитів
+            if (isUserFiltered)
+            {
+                var userId = userIdResult.Value;
+                if (!request.IsOwner(userId))
+                {
+                    throw new BusinessException(
+                        "Доступ заборонено",
+                        HttpStatusCode.Forbidden,
+                        "У вас немає прав для перегляду цього запиту"
+                    );
+                }
+            }
+
+            var response = mapper.Map<ApprovalRequestDto>((request, false));
+
+            return Results.Ok(response);
         }
     }
 }

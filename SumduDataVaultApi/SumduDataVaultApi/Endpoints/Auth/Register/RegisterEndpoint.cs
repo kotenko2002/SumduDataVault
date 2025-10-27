@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using SumduDataVaultApi.DataAccess.Entities;
 using MapsterMapper;
+using SumduDataVaultApi.Infrastructure.Exceptions;
+using System.Net;
 
 namespace SumduDataVaultApi.Endpoints.Auth.Register
 {
@@ -26,32 +28,32 @@ namespace SumduDataVaultApi.Endpoints.Auth.Register
             ILogger<RegisterEndpoint> logger
         )
         {
-            try
+            var existingUser = await userManager.FindByEmailAsync(request.Email);
+            if (existingUser != null)
             {
-                var existingUser = await userManager.FindByEmailAsync(request.Email);
-                if (existingUser != null)
-                {
-                    return Results.BadRequest($"Користувач з email {request.Email} вже існує!");
-                }
-
-                var user = mapper.Map<User>(request);
-
-                var result = await userManager.CreateAsync(user, request.Password);
-                if (!result.Succeeded)
-                {
-                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    return Results.BadRequest(errors);
-                }
-
-                await userManager.AddToRoleAsync(user, Roles.Client); // TODO: replace with Roles.Client
-
-                return Results.Ok();
+                throw new BusinessException(
+                    "Користувач вже існує",
+                    HttpStatusCode.Conflict,
+                    $"Користувач з email {request.Email} вже існує!"
+                );
             }
-            catch (Exception ex)
+
+            var user = mapper.Map<User>(request);
+
+            var result = await userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
             {
-                logger.LogError(ex, "Error occurred during registration for email: {Email}", request.Email);
-                return Results.Problem("Сталася помилка під час реєстрації");
+                var errors = result.Errors.Select(e => e.Description).ToList();
+                throw new BusinessException(
+                    "Помилка створення користувача",
+                    HttpStatusCode.BadRequest,
+                    errors
+                );
             }
+
+            await userManager.AddToRoleAsync(user, Roles.Client);
+
+            return Results.Ok();
         }
     }
 }
