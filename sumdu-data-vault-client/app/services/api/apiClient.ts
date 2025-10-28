@@ -1,4 +1,12 @@
-import axios, {type AxiosInstance, type AxiosResponse } from 'axios';
+import axios, {type AxiosInstance, type AxiosResponse, type InternalAxiosRequestConfig} from 'axios';
+import { toast } from 'sonner';
+
+// Інтерфейс для структури помилки з сервера
+interface ServerError {
+  title: string;
+  statusCode: number;
+  errors: string[];
+}
 
 // Базовий URL для API
 const BASE_URL = 'https://localhost:7278';
@@ -12,67 +20,84 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Інтерцептор для запитів
 apiClient.interceptors.request.use(
-  (config) => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      if (token) {
-        config.headers = config.headers ?? {};
-        (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-      }
-    } catch (_) {
-      // ігноруємо помилки доступу до localStorage
+    (config: InternalAxiosRequestConfig) => {
+        if (typeof window === 'undefined') {
+            return config;
+        }
+
+        let token: string | null = null;
+        try {
+            token = localStorage.getItem('accessToken');
+        } catch (error) {
+            console.error('Не вдалося отримати токен з localStorage:', error);
+            return config;
+        }
+
+        if (token) {
+            config.headers.set('Authorization', `Bearer ${token}`);
+        }
+
+        return config;
+    },
+    (error) => {
+        console.error('Помилка в інтерцепторі запиту:', error);
+        return Promise.reject(error);
     }
-    return config;
-  },
-  (error) => {
-    console.error('Request Error:', error);
-    return Promise.reject(error);
-  }
 );
 
 // Інтерцептор для відповідей
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  (error) => {
-    // Обробляємо помилки
-    console.error('Response Error:', error);
-    
-    if (error.code === 'ECONNABORTED') {
-      throw new Error('Час очікування запиту вичерпано. Перевірте підключення до сервера.');
-    }
-    
-    if (error.response) {
-      // Сервер відповів з кодом помилки
-      const status = error.response.status;
-      
-      // Обробляємо 401 Unauthorized - токен прострочений або недійсний
-      if (status === 401) {
-        console.log('Received 401, logging out user');
-        // Видаляємо токен
-        try {
-          localStorage.removeItem('accessToken');
-          // Відправляємо кастомну подію для оновлення AuthContext
-          window.dispatchEvent(new CustomEvent('tokenRemoved'));
-        } catch (_) {
-          // ігноруємо помилки доступу до localStorage
+    (response: AxiosResponse) => {
+        return response;
+    },
+    (error) => {
+        if (!error.response) {
+            if (error.code === 'ERR_NETWORK') {
+              toast.error('Помилка мережі. Сервер недоступний або немає з\'єднання.');
+            } else if (error.code === 'ECONNABORTED') {
+              toast.error('Запит було скасовано (таймаут).');
+            } else {
+              toast.error('Сталася невідома помилка, сервер не відповів.');
+            }
+
+          console.error('Axios error without response:', error);
+          return Promise.reject(error);
         }
-        throw new Error('Сесія закінчилася. Будь ласка, увійдіть знову.');
-      }
-      
-      const message = error.response.data?.message || `Помилка сервера: ${status}`;
-      throw new Error(message);
-    } else if (error.request) {
-      // Запит був відправлений, але відповіді не отримано
-      throw new Error('Помилка підключення до сервера. Перевірте, чи запущений бекенд на https://localhost:7278/');
-    } else {
-      // Щось інше сталося
-      throw new Error('Сталася невідома помилка при виконанні запиту');
+
+        const { statusCode, errors } = error.response.data as ServerError;
+
+        switch (statusCode) {
+            case 401: {
+                toast.error('Сесія закінчилася. Будь ласка, увійдіть знову.');
+
+                try {
+                  localStorage.removeItem('accessToken');
+                  window.dispatchEvent(new CustomEvent('tokenRemoved'));
+                } catch (e) {
+                  console.error('Не вдалося очистити localStorage:', e);
+                }
+                break;
+            }
+            case 400:
+            case 403:
+            case 404:
+            case 409:
+            case 422: {
+              errors.forEach((errorText: string) => toast.error(errorText));
+              break;
+            }
+            default: {
+              if (statusCode >= 500) {
+                  toast.error('Сталася критична помилка на сервері. Спробуйте пізніше.');
+                  console.error('Internal Server Error', error);
+              }
+              break;
+            }
+        }
+
+        return Promise.reject(error);
     }
-  }
 );
 
 export default apiClient;

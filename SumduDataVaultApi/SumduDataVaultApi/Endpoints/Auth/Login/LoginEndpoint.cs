@@ -35,7 +35,7 @@ namespace SumduDataVaultApi.Endpoints.Auth.Login
             {
                 throw new BusinessException(
                     "Невдалий вхід",
-                    HttpStatusCode.Unauthorized,
+                    HttpStatusCode.BadRequest,
                     "Неправильний email або пароль"
                 );
             }

@@ -25,9 +25,6 @@ export default function Register() {
       toast.success("Реєстрація успішна. Увійдіть до системи.");
       navigate(`/${ROUTES.auth.login}`, { replace: true });
     },
-    onError: (error: Error) => {
-      toast.error(`Помилка реєстрації: ${error.message}`);
-    },
   });
 
   const onSubmit = (e: React.FormEvent) => {

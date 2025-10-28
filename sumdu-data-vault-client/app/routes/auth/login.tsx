@@ -24,9 +24,6 @@ export default function Login() {
       toast.success("Вхід виконано успішно");
       navigate("/", { replace: true });
     },
-    onError: (error: Error) => {
-      toast.error(`Помилка входу: ${error.message}`);
-    },
   });
 
   const onSubmit = (e: React.FormEvent) => {

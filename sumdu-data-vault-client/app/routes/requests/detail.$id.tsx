@@ -161,49 +161,31 @@ export default function ApprovalRequestDetails() {
   const handleApprove = async () => {
     if (!id || !adminComments.trim()) return;
     
-    try {
-      await approveRequestMutation.mutateAsync({
-        id: parseInt(id),
-        request: { adminComments: adminComments.trim() }
-      });
-      console.log('Request approved successfully:', id);
-      setIsApproveDialogOpen(false);
-      setAdminComments("");
-    } catch (error) {
-      console.error('Failed to approve request:', error);
-      alert('Помилка при схваленні запиту. Спробуйте ще раз.');
-    }
+    await approveRequestMutation.mutateAsync({
+    id: parseInt(id),
+    request: { adminComments: adminComments.trim() }
+    });
+    setIsApproveDialogOpen(false);
+    setAdminComments("");
   };
 
   const handleReject = async () => {
     if (!id || !adminComments.trim()) return;
     
-    try {
-      await rejectRequestMutation.mutateAsync({
-        id: parseInt(id),
-        request: { adminComments: adminComments.trim() }
-      });
-      console.log('Request rejected successfully:', id);
-      setIsRejectDialogOpen(false);
-      setAdminComments("");
-    } catch (error) {
-      console.error('Failed to reject request:', error);
-      alert('Помилка при відхиленні запиту. Спробуйте ще раз.');
-    }
+    await rejectRequestMutation.mutateAsync({
+    id: parseInt(id),
+    request: { adminComments: adminComments.trim() }
+    });
+    setIsRejectDialogOpen(false);
+    setAdminComments("");
   };
 
   const handleCancel = async () => {
     if (!id) return;
     
-    try {
-      await cancelRequestMutation.mutateAsync(parseInt(id));
-      console.log('Request canceled successfully:', id);
-      setIsCancelDialogOpen(false);
-      setAdminComments("");
-    } catch (error) {
-      console.error('Failed to cancel request:', error);
-      alert('Помилка при скасуванні запиту. Спробуйте ще раз.');
-    }
+    await cancelRequestMutation.mutateAsync(parseInt(id));
+    setIsCancelDialogOpen(false);
+    setAdminComments("");
   };
 
 

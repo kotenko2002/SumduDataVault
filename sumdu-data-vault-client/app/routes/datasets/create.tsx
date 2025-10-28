@@ -63,9 +63,6 @@ export default function Create() {
 
       toast.success(`Датасет створено (ID: ${data.id}). Запит на апрув створено (ID: ${data.approvalRequestId}).`);
     },
-    onError: (error: Error) => {
-      toast.error(`Помилка при створенні датасету: ${error.message}`);
-    },
   });
 
   const handleInputChange = (field: keyof FormData, value: string | File | null) => {

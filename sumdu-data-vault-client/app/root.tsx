@@ -65,7 +65,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {children}
                   <ScrollRestoration />
                   <Scripts />
-                  <Toaster richColors position="bottom-right" />
+                  <Toaster
+                      position="bottom-right"
+                      visibleToasts={5}
+                      duration={5000}
+                      richColors
+                      expand
+                  />
                   <ReactQueryDevtools initialIsOpen={false} />
               </AuthProvider>
           </QueryClientProvider>

@@ -36,10 +36,7 @@ export default function DatasetDetails() {
 
   // React Query mutation для завантаження файлу
   const downloadMutation = useMutation({
-    mutationFn: (id: number) => DownloadDatasetService.downloadAndSaveDataset(id),
-    onError: (error: Error) => {
-      console.error('Помилка при завантаженні:', error);
-    },
+    mutationFn: (id: number) => DownloadDatasetService.downloadAndSaveDataset(id)
   });
 
   // React Query mutation для запиту доступу
@@ -53,9 +50,6 @@ export default function DatasetDetails() {
       
       setIsAccessDialogOpen(false);
       setJustificationText("");
-    },
-    onError: (error: Error) => {
-      console.error('Помилка при створенні запиту доступу:', error);
     },
   });
 
